@@ -15,9 +15,7 @@
       "id": "oled1",
       "top": -150,
       "left": 170,
-      "attrs": {
-        "i2cAddress": "0x3C"
-      }
+      "attrs": { "i2cAddress": "0x3C" }
     },
     {
       "type": "wokwi-photoresistor-sensor",
@@ -38,9 +36,14 @@
       "id": "buzz",
       "top": -20,
       "left": 270,
-      "attrs": {
-        "volume": "0.1"
-      }
+      "attrs": { "volume": "0.1" }
+    },
+    {
+      "type": "wokwi-ky-040",
+      "id": "enc1",
+      "top": 120,
+      "left": -120,
+      "attrs": {}
     }
   ],
   "connections": [
@@ -61,7 +64,13 @@
     ["esp:GND.3", "dht1:GND", "black", []],
 
     ["esp:18", "buzz:1", "green", []],
-    ["esp:GND.4", "buzz:2", "black", []]
+    ["esp:GND.4", "buzz:2", "black", []],
+
+    ["enc1:CLK", "esp:25", "green", []],
+    ["enc1:DT", "esp:26", "blue", []],
+    ["enc1:SW", "esp:27", "yellow", []],
+    ["enc1:VCC", "esp:3V3", "red", []],
+    ["enc1:GND", "esp:GND.5", "black", []]
   ],
   "dependencies": {}
 }

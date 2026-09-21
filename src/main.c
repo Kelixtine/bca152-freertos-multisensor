@@ -6,14 +6,19 @@
 #include "freertos/queue.h"
 
 #include "esp_adc/adc_oneshot.h"
-#include "driver/ledc.h"
 #include "driver/i2c.h"
+#include "driver/gpio.h"
+#include "driver/ledc.h"
 
 #include "ssd1306.h"
 
 #define SDA_PIN 21
 #define SCL_PIN 22
+
 #define BUZZER_PIN 18
+#define ENC_CLK 25
+#define ENC_DT 26
+#define ENC_SW 27
 
 typedef struct {
     char sensor[8];
@@ -21,13 +26,23 @@ typedef struct {
     float value2;
 } SensorData;
 
+typedef enum {
+    TEMPERATURE,
+    HUMIDITY,
+    LIGHT,
+    MOTION
+} DisplayMode;
+
 QueueHandle_t sensorQueue;
 adc_oneshot_unit_handle_t adc_handle;
 SSD1306_t dev;
 
+DisplayMode currentPage = TEMPERATURE;
+
 float latestTemp = 24.0;
 float latestHum = 40.0;
 int latestLight = 1001;
+int motionDetected = 0;
 
 // ---------------- LDR TASK ----------------
 void ldrTask(void *pv)
@@ -55,7 +70,6 @@ void dhtTask(void *pv)
 
     while (1)
     {
-        // Simulated values for Wokwi
         strcpy(data.sensor, "DHT");
         data.value1 = 24.0;
         data.value2 = 40.0;
@@ -66,7 +80,37 @@ void dhtTask(void *pv)
     }
 }
 
-// ---------------- DISPLAY + BUZZER ----------------
+// ---------------- ROTARY ENCODER ----------------
+void inputTask(void *pv)
+{
+    gpio_set_direction(ENC_CLK, GPIO_MODE_INPUT);
+    gpio_set_direction(ENC_DT, GPIO_MODE_INPUT);
+    gpio_set_direction(ENC_SW, GPIO_MODE_INPUT);
+
+    gpio_set_pull_mode(ENC_CLK, GPIO_PULLUP_ONLY);
+    gpio_set_pull_mode(ENC_DT, GPIO_PULLUP_ONLY);
+    gpio_set_pull_mode(ENC_SW, GPIO_PULLUP_ONLY);
+
+    int lastCLK = gpio_get_level(ENC_CLK);
+
+    while (1)
+    {
+        int clk = gpio_get_level(ENC_CLK);
+
+        if (clk != lastCLK && clk == 0)
+        {
+            if (gpio_get_level(ENC_DT))
+                currentPage = (currentPage + 1) % 4;
+            else
+                currentPage = (currentPage + 3) % 4;
+        }
+
+        lastCLK = clk;
+        vTaskDelay(pdMS_TO_TICKS(5));
+    }
+}
+
+// ---------------- DISPLAY TASK ----------------
 void displayTask(void *pv)
 {
     SensorData rx;
@@ -84,19 +128,40 @@ void displayTask(void *pv)
                 latestHum = rx.value2;
             }
 
-            // OLED
             ssd1306_clear_screen(&dev, false);
 
-            sprintf(line, "Temp: %.1f C", latestTemp);
-            ssd1306_display_text(&dev, 0, line, strlen(line), false);
+            switch (currentPage)
+            {
+                case TEMPERATURE:
+                    sprintf(line, "TEMPERATURE");
+                    ssd1306_display_text(&dev, 0, line, strlen(line), false);
+                    sprintf(line, "%.1f C", latestTemp);
+                    ssd1306_display_text(&dev, 2, line, strlen(line), false);
+                    break;
 
-            sprintf(line, "Hum : %.1f %%", latestHum);
-            ssd1306_display_text(&dev, 2, line, strlen(line), false);
+                case HUMIDITY:
+                    sprintf(line, "HUMIDITY");
+                    ssd1306_display_text(&dev, 0, line, strlen(line), false);
+                    sprintf(line, "%.1f %%", latestHum);
+                    ssd1306_display_text(&dev, 2, line, strlen(line), false);
+                    break;
 
-            sprintf(line, "Light: %d", latestLight);
-            ssd1306_display_text(&dev, 4, line, strlen(line), false);
+                case LIGHT:
+                    sprintf(line, "LIGHT");
+                    ssd1306_display_text(&dev, 0, line, strlen(line), false);
+                    sprintf(line, "%d", latestLight);
+                    ssd1306_display_text(&dev, 2, line, strlen(line), false);
+                    break;
 
-            // BUZZER
+                case MOTION:
+                    sprintf(line, "MOTION");
+                    ssd1306_display_text(&dev, 0, line, strlen(line), false);
+                    sprintf(line, motionDetected ? "DETECTED" : "NONE");
+                    ssd1306_display_text(&dev, 2, line, strlen(line), false);
+                    break;
+            }
+
+            // Buzzer alarm (Part VIII kept)
             if (latestLight < 500)
             {
                 ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, 512);
@@ -116,7 +181,6 @@ void app_main(void)
 {
     sensorQueue = xQueueCreate(5, sizeof(SensorData));
 
-    // ADC (LDR on GPIO34)
     adc_oneshot_unit_init_cfg_t init_cfg = {
         .unit_id = ADC_UNIT_1
     };
@@ -128,11 +192,9 @@ void app_main(void)
     };
     adc_oneshot_config_channel(adc_handle, ADC_CHANNEL_6, &chan_cfg);
 
-    // OLED
     i2c_master_init(&dev, SDA_PIN, SCL_PIN, -1);
     ssd1306_init(&dev, 128, 64);
 
-    // BUZZER PWM
     ledc_timer_config_t timer = {
         .speed_mode = LEDC_LOW_SPEED_MODE,
         .duty_resolution = LEDC_TIMER_10_BIT,
@@ -152,9 +214,10 @@ void app_main(void)
     };
     ledc_channel_config(&channel);
 
-    printf("Multi-Sensor System Started\n");
+    printf("Part VII - Rotary Encoder Started\n");
 
     xTaskCreate(ldrTask, "LDR", 4096, NULL, 1, NULL);
     xTaskCreate(dhtTask, "DHT", 4096, NULL, 1, NULL);
+    xTaskCreate(inputTask, "INPUT", 4096, NULL, 1, NULL);
     xTaskCreate(displayTask, "OLED", 4096, NULL, 1, NULL);
 }
