@@ -3,15 +3,18 @@
   "author": "Kelixtine",
   "editor": "wokwi",
   "parts": [
-    {
-      "type": "board-esp32-devkit-c-v4",
-      "id": "esp",
-      "top": 0,
-      "left": 0
-    }
+    { "type": "board-esp32-devkit-c-v4", "id": "esp", "top": 0, "left": 0 },
+    { "type": "wokwi-dht22", "id": "dht", "top": -110, "left": -80 },
+    { "type": "wokwi-photoresistor-sensor", "id": "ldr", "top": -110, "left": 90 }
   ],
   "connections": [
     ["esp:TX", "$serialMonitor:RX", "", []],
-    ["esp:RX", "$serialMonitor:TX", "", []]
+    ["esp:RX", "$serialMonitor:TX", "", []],
+    ["dht:VCC", "esp:3V3", "red", []],
+    ["dht:GND", "esp:GND.1", "black", []],
+    ["dht:SDA", "esp:4", "green", []],
+    ["ldr:VCC", "esp:3V3", "red", []],
+    ["ldr:GND", "esp:GND.2", "black", []],
+    ["ldr:AO", "esp:34", "blue", []]
   ]
 }
