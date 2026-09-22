@@ -13,7 +13,7 @@
                 "C:/Users/User/.platformio/packages/framework-espidf/components/xtensa/esp32/include",
                 "C:/Users/User/.platformio/packages/framework-espidf/components/xtensa/include",
                 "C:/Users/User/.platformio/packages/framework-espidf/components/xtensa/deprecated_include",
-                "C:/Users/User/Documents/bca152-freertos-multisensor/.pio/build/esp32doit-devkit-v1/config",
+                "C:/Users/User/Documents/bca152-freertos-multisensor/.pio/build/esp32dev/config",
                 "C:/Users/User/.platformio/packages/framework-espidf/components/esp_libc/platform_include",
                 "C:/Users/User/.platformio/packages/framework-espidf/components/freertos/config/include",
                 "C:/Users/User/.platformio/packages/framework-espidf/components/freertos/config/include/freertos",
@@ -112,7 +112,7 @@
                 "C:/Users/User/.platformio/packages/framework-espidf/components/mbedtls/port/psa_crypto_storage/include",
                 "C:/Users/User/.platformio/packages/framework-espidf/components/mbedtls/mbedtls/tf-psa-crypto/include",
                 "C:/Users/User/.platformio/packages/framework-espidf/components/mbedtls/mbedtls/tf-psa-crypto/drivers/builtin/include",
-                "C:/Users/User/Documents/bca152-freertos-multisensor/.pio/build/esp32doit-devkit-v1/esp-idf/mbedtls/mbedtls/tf-psa-crypto/include",
+                "C:/Users/User/Documents/bca152-freertos-multisensor/.pio/build/esp32dev/esp-idf/mbedtls/mbedtls/tf-psa-crypto/include",
                 "C:/Users/User/.platformio/packages/framework-espidf/components/mbedtls/mbedtls/tf-psa-crypto/drivers/everest/include",
                 "C:/Users/User/.platformio/packages/framework-espidf/components/mbedtls/mbedtls/tf-psa-crypto/drivers/p256-m/p256-m",
                 "C:/Users/User/.platformio/packages/framework-espidf/components/mbedtls/mbedtls/tf-psa-crypto/drivers/pqcp/include",
@@ -257,7 +257,7 @@
                     "C:/Users/User/.platformio/packages/framework-espidf/components/xtensa/esp32/include",
                     "C:/Users/User/.platformio/packages/framework-espidf/components/xtensa/include",
                     "C:/Users/User/.platformio/packages/framework-espidf/components/xtensa/deprecated_include",
-                    "C:/Users/User/Documents/bca152-freertos-multisensor/.pio/build/esp32doit-devkit-v1/config",
+                    "C:/Users/User/Documents/bca152-freertos-multisensor/.pio/build/esp32dev/config",
                     "C:/Users/User/.platformio/packages/framework-espidf/components/esp_libc/platform_include",
                     "C:/Users/User/.platformio/packages/framework-espidf/components/freertos/config/include",
                     "C:/Users/User/.platformio/packages/framework-espidf/components/freertos/config/include/freertos",
@@ -356,7 +356,7 @@
                     "C:/Users/User/.platformio/packages/framework-espidf/components/mbedtls/port/psa_crypto_storage/include",
                     "C:/Users/User/.platformio/packages/framework-espidf/components/mbedtls/mbedtls/tf-psa-crypto/include",
                     "C:/Users/User/.platformio/packages/framework-espidf/components/mbedtls/mbedtls/tf-psa-crypto/drivers/builtin/include",
-                    "C:/Users/User/Documents/bca152-freertos-multisensor/.pio/build/esp32doit-devkit-v1/esp-idf/mbedtls/mbedtls/tf-psa-crypto/include",
+                    "C:/Users/User/Documents/bca152-freertos-multisensor/.pio/build/esp32dev/esp-idf/mbedtls/mbedtls/tf-psa-crypto/include",
                     "C:/Users/User/.platformio/packages/framework-espidf/components/mbedtls/mbedtls/tf-psa-crypto/drivers/everest/include",
                     "C:/Users/User/.platformio/packages/framework-espidf/components/mbedtls/mbedtls/tf-psa-crypto/drivers/p256-m/p256-m",
                     "C:/Users/User/.platformio/packages/framework-espidf/components/mbedtls/mbedtls/tf-psa-crypto/drivers/pqcp/include",
@@ -511,7 +511,7 @@
             "cppStandard": "gnu++26",
             "compilerPath": "C:/Users/User/.platformio/packages/toolchain-xtensa-esp-elf/bin/xtensa-esp32-elf-gcc.exe",
             "compilerArgs": [
-                "@C:/Users/User/Documents/bca152-freertos-multisensor/.pio/build/esp32doit-devkit-v1/toolchain/cflags",
+                "@C:/Users/User/Documents/bca152-freertos-multisensor/.pio/build/esp32dev/toolchain/cflags",
                 ""
             ]
         }

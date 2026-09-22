@@ -1,63 +1,53 @@
 #include "alarm.h"
 #include "rtos_objects.h"
-
-#include "driver/ledc.h"
+#include "sensors.h"
+#include <string.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
-#include "freertos/event_groups.h"
+#include "driver/gpio.h"
 
-#include <stdio.h>
+#ifndef BUZZER_PIN
+#define BUZZER_PIN GPIO_NUM_27
+#endif
 
-#define BUZZER_PIN GPIO_NUM_14
-
-AlarmState evaluateTemperature(float t)
-{
-    if (t < TEMP_THRESHOLD_LOW) return AlarmState::LOW_TEMP;
-    if (t > TEMP_THRESHOLD_HIGH) return AlarmState::HIGH_TEMP;
-    return AlarmState::NORMAL;
+AlarmState evaluateTemperature(float temperature) {
+    if (temperature < TEMP_LOW_THRESHOLD) {
+        return ALARM_LOW_TEMPERATURE;
+    } else if (temperature > TEMP_HIGH_THRESHOLD) {
+        return ALARM_HIGH_TEMPERATURE;
+    }
+    return ALARM_NORMAL;
 }
 
-void vAlarmTask(void *pvParameters)
-{
-    ledc_timer_config_t timer = {
-        .speed_mode = LEDC_LOW_SPEED_MODE,
-        .timer_num = LEDC_TIMER_0,
-        .duty_resolution = LEDC_TIMER_10_BIT,
-        .freq_hz = 2000,
-        .clk_cfg = LEDC_AUTO_CLK
-    };
-    ledc_timer_config(&timer);
+void alarm_task(void *pvParameters) {
+    gpio_reset_pin(BUZZER_PIN);
+    gpio_set_direction(BUZZER_PIN, GPIO_MODE_OUTPUT);
+    gpio_set_level(BUZZER_PIN, 0);
 
-    ledc_channel_config_t ch = {
-        .gpio_num = BUZZER_PIN,
-        .speed_mode = LEDC_LOW_SPEED_MODE,
-        .channel = LEDC_CHANNEL_0,
-        .timer_sel = LEDC_TIMER_0,
-        .duty = 0,
-        .hpoint = 0
-    };
-    ledc_channel_config(&ch);
+    SensorData data;
+    memset(&data, 0, sizeof(SensorData));
 
-    bool previous = false;
-
-    while (1)
-    {
-        bool alarm = xEventGroupGetBits(g_systemEvents) & EVENT_ALARM;
-
-        ledc_set_duty(LEDC_LOW_SPEED_MODE,
-                      LEDC_CHANNEL_0,
-                      alarm ? 512 : 0);
-
-        ledc_update_duty(LEDC_LOW_SPEED_MODE,
-                         LEDC_CHANNEL_0);
-
-        if (alarm != previous)
-        {
-            printf("[BUZZER] %s\n",
-                   alarm ? "Activated" : "Deactivated");
-            previous = alarm;
+    for (;;) {
+        if (sensorQueue != NULL) {
+            xQueuePeek(sensorQueue, &data, portMAX_DELAY);
         }
 
-        vTaskDelay(pdMS_TO_TICKS(50));
+        bool is_active = true;
+        if (systemEvents != NULL) {
+            EventBits_t bits = xEventGroupGetBits(systemEvents);
+            is_active = (bits & EVENT_ACTIVE) != 0;
+        }
+
+        AlarmState state = evaluateTemperature(data.temperature);
+
+        if (is_active && (state != ALARM_NORMAL)) {
+            gpio_set_level(BUZZER_PIN, 1);
+            vTaskDelay(pdMS_TO_TICKS(150));
+            gpio_set_level(BUZZER_PIN, 0);
+            vTaskDelay(pdMS_TO_TICKS(150));
+        } else {
+            gpio_set_level(BUZZER_PIN, 0);
+            vTaskDelay(pdMS_TO_TICKS(500));
+        }
     }
 }

@@ -1,31 +1,21 @@
 #ifndef SYSTEM_STATE_H
 #define SYSTEM_STATE_H
 
-#include <stdint.h>
-#include "freertos/FreeRTOS.h"
+#include <stdbool.h>
 
-enum class SystemState {
-    ACTIVE,
-    INACTIVE
-};
+typedef enum {
+    STATE_INACTIVE = 0,
+    STATE_ACTIVE   = 1
+} SystemState;
 
-enum class DisplayMode {
-    TEMPERATURE,
-    HUMIDITY,
-    LIGHT,
-    MOTION
-};
-
-extern volatile SystemState g_systemState;
-extern TickType_t gLastActivityTick;
-
-DisplayMode getNextDisplayMode(DisplayMode current);
-DisplayMode getPreviousDisplayMode(DisplayMode current);
-
-SystemState evaluateSystemState(
-    SystemState currentState,
-    bool motionDetected,
-    uint32_t elapsedTimeMs,
-    uint32_t timeoutMs);
-
+#ifdef __cplusplus
+extern "C" {
 #endif
+
+SystemState evaluateSystemState(SystemState current, bool motionDetected, bool timeoutOccurred);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif 

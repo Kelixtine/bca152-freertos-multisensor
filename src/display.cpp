@@ -1,122 +1,161 @@
 #include "display.h"
+#include "sensors.h"
 #include "input.h"
 #include "rtos_objects.h"
-#include "system_state.h"
-#include "sensors.h"
-#include "ssd1306.h"
-
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
-#include "freertos/queue.h"
-#include "freertos/event_groups.h"
 
 #include <stdio.h>
 #include <string.h>
 
-void vDisplayTask(void *pvParameters)
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "driver/gpio.h"
+#include "rom/ets_sys.h"
+
+#define I2C_SDA_PIN GPIO_NUM_21
+#define I2C_SCL_PIN GPIO_NUM_22
+#define SSD1306_ADDR 0x78
+
+DisplayMode currentDisplayMode = MODE_TEMPERATURE;
+
+/* KEEP YOUR EXISTING FONT + I2C FUNCTIONS HERE
+   get_glyph()
+   i2c_bus_init()
+   i2c_bus_start()
+   i2c_bus_stop()
+   i2c_bus_write_byte()
+   oled_write_command()
+   oled_init()
+   oled_clear()
+*/
+
+static void oled_render_text(const char *line1,
+                             const char *line2,
+                             const char *line3)
 {
-    SSD1306_t dev;
+    uint8_t buffer[1024];
+    memset(buffer, 0, sizeof(buffer));
 
-    i2c_master_init(&dev, CONFIG_SDA_GPIO, CONFIG_SCL_GPIO, CONFIG_RESET_GPIO);
-    ssd1306_init(&dev, 128, 64);
-    ssd1306_clear_screen(&dev, false);
-    ssd1306_contrast(&dev, 0xff);
+    const char *lines[3] = { line1, line2, line3 };
+    const int pages[3] = { 1, 3, 5 };
 
-    SensorData sensorData = {24.0f, 40.0f, 50, false};
-    DisplayMode currentMode = DisplayMode::TEMPERATURE;
-    DisplayMode lastMode = DisplayMode::MOTION;
+    for (int l = 0; l < 3; l++)
+    {
+        int x = 8;
 
-    SensorData lastDrawn = {-999, -999, -1, false};
+        for (int i = 0; i < strlen(lines[l]); i++)
+        {
+            const uint8_t *g = get_glyph(lines[l][i]);
 
-    NavDirection navDir;
+            for (int c = 0; c < 5; c++)
+                buffer[pages[l] * 128 + x + c] = g[c];
 
-    char titleBuf[32];
-    char valueBuf[32];
+            x += 6;
+        }
+    }
 
-    bool screenOn = true;
+    oled_write_command(0x21);
+    oled_write_command(0);
+    oled_write_command(127);
+    oled_write_command(0x22);
+    oled_write_command(0);
+    oled_write_command(7);
+
+    for (int i = 0; i < 1024; i += 16)
+    {
+        i2c_bus_start();
+        i2c_bus_write_byte(SSD1306_ADDR);
+        i2c_bus_write_byte(0x40);
+
+        for (int j = 0; j < 16; j++)
+            i2c_bus_write_byte(buffer[i + j]);
+
+        i2c_bus_stop();
+    }
+}
+
+void display_task(void *pvParameters)
+{
+    oled_init();
+    oled_clear();
+
+    SensorData data = {};
+    char line1[32];
+    char line2[32];
+    char line3[32];
+
+    bool oledOn = true;
 
     while (1)
     {
-        bool dirty = false;
+        if (sensorQueue)
+            xQueueReceive(sensorQueue, &data, 0);
 
-        if (xQueueReceive(navQueue, &navDir, 0) == pdTRUE)
+        int mode;
+        if (modeQueue &&
+            xQueueReceive(modeQueue, &mode, 0) == pdTRUE)
         {
-            if (navDir == NavDirection::NEXT)
-                currentMode = getNextDisplayMode(currentMode);
-            else
-                currentMode = getPreviousDisplayMode(currentMode);
-
-            dirty = true;
+            currentDisplayMode = (DisplayMode)mode;
         }
 
-        if (xQueueReceive(displayQueue, &sensorData, 0) == pdTRUE)
+        bool active = true;
+
+        if (systemEvents)
         {
-            dirty = true;
+            EventBits_t bits = xEventGroupGetBits(systemEvents);
+            active = bits & EVENT_ACTIVE;
         }
 
-        EventBits_t bits = xEventGroupGetBits(g_systemEvents);
-
-        if ((bits & EVENT_ACTIVE) == 0)
+        if (!active)
         {
-            if (screenOn)
+            if (oledOn)
             {
-                ssd1306_clear_screen(&dev, false);
-                screenOn = false;
+                oled_clear();
+                oled_write_command(0xAE);
+                oledOn = false;
             }
 
             vTaskDelay(pdMS_TO_TICKS(100));
             continue;
         }
 
-        screenOn = true;
-
-        if (lastMode != currentMode)
+        if (!oledOn)
         {
-            lastMode = currentMode;
-            dirty = true;
+            oled_write_command(0xAF);
+            oledOn = true;
         }
 
-        if (memcmp(&lastDrawn, &sensorData, sizeof(SensorData)) != 0)
+        strcpy(line1, "ROOM MONITOR");
+
+        switch (currentDisplayMode)
         {
-            dirty = true;
+        case MODE_TEMPERATURE:
+            strcpy(line2, "Page: Temp");
+            snprintf(line3, sizeof(line3),
+                     "Val: %.1f C", data.temperature);
+            break;
+
+        case MODE_HUMIDITY:
+            strcpy(line2, "Page: Humidity");
+            snprintf(line3, sizeof(line3),
+                     "Val: %.1f %%", data.humidity);
+            break;
+
+        case MODE_LIGHT:
+            strcpy(line2, "Page: Light");
+            snprintf(line3, sizeof(line3),
+                     "Val: %d %%", data.lightLevel);
+            break;
+
+        case MODE_MOTION:
+            strcpy(line2, "Page: Motion");
+            snprintf(line3, sizeof(line3),
+                     "Val: %s",
+                     data.motionDetected ? "DETECTED" : "CLEAR");
+            break;
         }
 
-        if (dirty)
-        {
-            lastDrawn = sensorData;
+        oled_render_text(line1, line2, line3);
 
-            ssd1306_clear_screen(&dev, false);
-
-            ssd1306_display_text(&dev, 0, " ROOM MONITOR ", 14, false);
-
-            switch (currentMode)
-            {
-                case DisplayMode::TEMPERATURE:
-                    snprintf(titleBuf, sizeof(titleBuf), "Page: Temp");
-                    snprintf(valueBuf, sizeof(valueBuf), "Val: %.1f C", sensorData.temperature);
-                    break;
-
-                case DisplayMode::HUMIDITY:
-                    snprintf(titleBuf, sizeof(titleBuf), "Page: Humidity");
-                    snprintf(valueBuf, sizeof(valueBuf), "Val: %.1f %%", sensorData.humidity);
-                    break;
-
-                case DisplayMode::LIGHT:
-                    snprintf(titleBuf, sizeof(titleBuf), "Page: Light");
-                    snprintf(valueBuf, sizeof(valueBuf), "Val: %d", sensorData.lightLevel);
-                    break;
-
-                case DisplayMode::MOTION:
-                    snprintf(titleBuf, sizeof(titleBuf), "Page: Motion");
-                    snprintf(valueBuf, sizeof(valueBuf), "Val: %s",
-                             sensorData.motionDetected ? "DETECTED" : "CLEAR");
-                    break;
-            }
-
-            ssd1306_display_text(&dev, 2, titleBuf, strlen(titleBuf), false);
-            ssd1306_display_text(&dev, 4, valueBuf, strlen(valueBuf), false);
-        }
-
-        vTaskDelay(pdMS_TO_TICKS(50));
+        vTaskDelay(pdMS_TO_TICKS(100));
     }
 }

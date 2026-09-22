@@ -1,17 +1,42 @@
 #ifndef INPUT_H
 #define INPUT_H
 
+#if __has_include("driver/gpio.h")
 #include "driver/gpio.h"
-
-#define ENCODER_CLK GPIO_NUM_25
-#define ENCODER_DT  GPIO_NUM_26
-#define ENCODER_SW  GPIO_NUM_27
-
-enum class NavDirection {
-    PREVIOUS = -1,
-    NEXT = 1
-};
-
-void vInputTask(void *pvParameters);
-
+#ifndef ENCODER_CLK
+#define ENCODER_CLK GPIO_NUM_18
 #endif
+#ifndef ENCODER_DT
+#define ENCODER_DT GPIO_NUM_19
+#endif
+#else
+#ifndef gpio_num_t
+typedef int gpio_num_t;
+#define GPIO_NUM_18 18
+#define GPIO_NUM_19 19
+#define ENCODER_CLK GPIO_NUM_18
+#define ENCODER_DT  GPIO_NUM_19
+#endif
+#endif
+
+typedef enum {
+    MODE_TEMPERATURE = 0,
+    MODE_HUMIDITY    = 1,
+    MODE_LIGHT       = 2,
+    MODE_MOTION      = 3,
+    MODE_COUNT       = 4
+} DisplayMode;
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+DisplayMode nextDisplayMode(DisplayMode current);
+DisplayMode previousDisplayMode(DisplayMode current);
+void input_task(void *pvParameters);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif 

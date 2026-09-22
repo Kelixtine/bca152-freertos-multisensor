@@ -1,7 +1,4 @@
-FILE(GLOB_RECURSE app_sources ${CMAKE_SOURCE_DIR}/src/*.*)
+FILE(GLOB_RECURSE app_sources "${CMAKE_CURRENT_SOURCE_DIR}/*.*")
 
-idf_component_register(
-    SRCS "main.cpp" "rtos_objects.cpp" "system_state.cpp" "sensors.cpp" "input.cpp" "display.cpp" "alarm.cpp" "motion.cpp"
-    INCLUDE_DIRS "../include"
-    REQUIRES driver esp_adc
-)
+idf_component_register(SRCS ${app_sources}
+                       INCLUDE_DIRS "." "${CMAKE_CURRENT_LIST_DIR}/../include")
