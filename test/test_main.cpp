@@ -59,6 +59,14 @@ void test_next_display_mode(void)
     );
 }
 
+void test_next_display_mode_wrap(void)
+{
+    TEST_ASSERT_EQUAL(
+        MODE_TEMPERATURE,
+        nextDisplayMode(MODE_MOTION)
+    );
+}
+
 int main(void)
 {
     UNITY_BEGIN();
@@ -70,6 +78,7 @@ int main(void)
     RUN_TEST(test_temp_above_upper);
 
     RUN_TEST(test_next_display_mode);
+    RUN_TEST(test_next_display_mode_wrap);
 
     return UNITY_END();
 }
