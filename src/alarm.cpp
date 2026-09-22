@@ -35,10 +35,8 @@ void alarm_task(void *pvParameters)
         AlarmState state = evaluateTemperature(data.temperature);
         bool alarmActive = (state != ALARM_NORMAL);
 
-        // Active buzzer
         gpio_set_level(BUZZER_PIN, alarmActive ? 1 : 0);
 
-        // Terminal log only when state changes
         if (alarmActive != lastAlarmState)
         {
             if (alarmActive)
@@ -49,6 +47,6 @@ void alarm_task(void *pvParameters)
             lastAlarmState = alarmActive;
         }
 
-        vTaskDelay(pdMS_TO_TICKS(100));
+        vTaskDelay(pdMS_TO_TICKS(50));
     }
 }

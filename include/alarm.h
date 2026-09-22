@@ -4,7 +4,7 @@
 #include <stdbool.h>
 #include "driver/gpio.h"
 
-#define BUZZER_PIN GPIO_NUM_14
+#define BUZZER_PIN GPIO_NUM_27
 
 #define TEMP_LOW_THRESHOLD 18.0f
 #define TEMP_HIGH_THRESHOLD 30.0f
