@@ -26,12 +26,21 @@ void test_temp_exactly_lower(void)
     );
 }
 
+void test_temp_normal(void)
+{
+    TEST_ASSERT_EQUAL(
+        ALARM_NORMAL,
+        evaluateTemperature(24.0f)
+    );
+}
+
 int main(void)
 {
     UNITY_BEGIN();
 
     RUN_TEST(test_temp_below_lower);
     RUN_TEST(test_temp_exactly_lower);
+    RUN_TEST(test_temp_normal);
 
     return UNITY_END();
 }
