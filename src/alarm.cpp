@@ -4,7 +4,7 @@
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
-#include "driver/gpio.h"
+#include "driver/ledc.h"
 
 AlarmState evaluateTemperature(float temperature)
 {
@@ -19,13 +19,26 @@ AlarmState evaluateTemperature(float temperature)
 
 void alarm_task(void *pvParameters)
 {
-    gpio_config_t io_conf = {};
-    io_conf.pin_bit_mask = (1ULL << BUZZER_PIN);
-    io_conf.mode = GPIO_MODE_OUTPUT;
-    gpio_config(&io_conf);
+    ledc_timer_config_t timer = {};
+    timer.speed_mode = LEDC_LOW_SPEED_MODE;
+    timer.timer_num = LEDC_TIMER_0;
+    timer.duty_resolution = LEDC_TIMER_10_BIT;
+    timer.freq_hz = 2000;
+    timer.clk_cfg = LEDC_AUTO_CLK;
+    ledc_timer_config(&timer);
+
+    ledc_channel_config_t channel = {};
+    channel.gpio_num = BUZZER_PIN;
+    channel.speed_mode = LEDC_LOW_SPEED_MODE;
+    channel.channel = LEDC_CHANNEL_0;
+    channel.intr_type = LEDC_INTR_DISABLE;
+    channel.timer_sel = LEDC_TIMER_0;
+    channel.duty = 0;
+    channel.hpoint = 0;
+    ledc_channel_config(&channel);
 
     SensorData data = {};
-    bool lastAlarmState = false;
+    bool lastState = false;
 
     while (true)
     {
@@ -35,16 +48,25 @@ void alarm_task(void *pvParameters)
         AlarmState state = evaluateTemperature(data.temperature);
         bool alarmActive = (state != ALARM_NORMAL);
 
-        gpio_set_level(BUZZER_PIN, alarmActive ? 1 : 0);
+        if (alarmActive)
+        {
+            ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, 512);
+            ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0);
+        }
+        else
+        {
+            ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, 0);
+            ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0);
+        }
 
-        if (alarmActive != lastAlarmState)
+        if (alarmActive != lastState)
         {
             if (alarmActive)
                 safe_log("[AlarmTask] Activated");
             else
                 safe_log("[AlarmTask] Deactivated");
 
-            lastAlarmState = alarmActive;
+            lastState = alarmActive;
         }
 
         vTaskDelay(pdMS_TO_TICKS(50));
