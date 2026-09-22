@@ -2,15 +2,11 @@
 #define ALARM_H
 
 #include <stdbool.h>
-
-#if __has_include("driver/gpio.h")
 #include "driver/gpio.h"
-#ifndef BUZZER_PIN
-#define BUZZER_PIN GPIO_NUM_27
-#endif
-#endif
 
-#define TEMP_LOW_THRESHOLD  18.0f
+#define BUZZER_PIN GPIO_NUM_14
+
+#define TEMP_LOW_THRESHOLD 18.0f
 #define TEMP_HIGH_THRESHOLD 30.0f
 
 typedef enum {
@@ -30,4 +26,4 @@ void alarm_task(void *pvParameters);
 }
 #endif
 
-#endif 
+#endif

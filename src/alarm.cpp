@@ -33,11 +33,12 @@ void alarm_task(void *pvParameters)
             xQueueReceive(sensorQueue, &data, 0);
 
         AlarmState state = evaluateTemperature(data.temperature);
-
         bool alarmActive = (state != ALARM_NORMAL);
 
+        // Active buzzer
         gpio_set_level(BUZZER_PIN, alarmActive ? 1 : 0);
 
+        // Terminal log only when state changes
         if (alarmActive != lastAlarmState)
         {
             if (alarmActive)
