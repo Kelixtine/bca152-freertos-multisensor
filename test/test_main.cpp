@@ -67,6 +67,14 @@ void test_next_display_mode_wrap(void)
     );
 }
 
+void test_previous_display_mode(void)
+{
+    TEST_ASSERT_EQUAL(
+        MODE_MOTION,
+        previousDisplayMode(MODE_TEMPERATURE)
+    );
+}
+
 int main(void)
 {
     UNITY_BEGIN();
@@ -79,6 +87,7 @@ int main(void)
 
     RUN_TEST(test_next_display_mode);
     RUN_TEST(test_next_display_mode_wrap);
+    RUN_TEST(test_previous_display_mode);
 
     return UNITY_END();
 }
