@@ -2,6 +2,7 @@
 
 #include "alarm.h"
 #include "input.h"
+#include "system_state.h"
 
 void setUp(void)
 {
@@ -91,6 +92,18 @@ void test_next_display_mode_humidity(void)
     );
 }
 
+void test_inactive_motion_detected(void)
+{
+    TEST_ASSERT_EQUAL(
+        STATE_ACTIVE,
+        evaluateSystemState(
+            STATE_INACTIVE,
+            true,
+            false
+        )
+    );
+}
+
 int main(void)
 {
     UNITY_BEGIN();
@@ -106,8 +119,9 @@ int main(void)
 
     RUN_TEST(test_previous_display_mode);
     RUN_TEST(test_previous_display_mode_normal);
-
     RUN_TEST(test_next_display_mode_humidity);
+
+    RUN_TEST(test_inactive_motion_detected);
 
     return UNITY_END();
 }
