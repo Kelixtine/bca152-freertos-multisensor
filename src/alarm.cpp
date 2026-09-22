@@ -6,6 +6,17 @@
 #include "freertos/task.h"
 #include "driver/gpio.h"
 
+AlarmState evaluateTemperature(float temperature)
+{
+    if (temperature <= LOWER_TEMP_THRESHOLD ||
+        temperature >= UPPER_TEMP_THRESHOLD)
+    {
+        return AlarmState::ALARM;
+    }
+
+    return AlarmState::NORMAL;
+}
+
 void alarm_task(void *pvParameters)
 {
     gpio_config_t io_conf = {};
@@ -14,28 +25,28 @@ void alarm_task(void *pvParameters)
     gpio_config(&io_conf);
 
     SensorData data = {};
-    bool alarmActive = false;
-    bool lastState = false;
+    bool lastAlarmState = false;
 
     while (true)
     {
         if (sensorQueue != NULL)
             xQueueReceive(sensorQueue, &data, 0);
 
-        alarmActive =
-            (data.temperature >= 30.0f) ||
-            (data.temperature <= 18.0f);
+        bool alarmActive =
+            (evaluateTemperature(data.temperature) == AlarmState::ALARM);
 
+        // Active buzzer: HIGH = sound, LOW = silent
         gpio_set_level(BUZZER_PIN, alarmActive ? 1 : 0);
 
-        if (alarmActive != lastState)
+        // Print only when state changes
+        if (alarmActive != lastAlarmState)
         {
             if (alarmActive)
                 safe_log("[AlarmTask] Activated");
             else
                 safe_log("[AlarmTask] Deactivated");
 
-            lastState = alarmActive;
+            lastAlarmState = alarmActive;
         }
 
         vTaskDelay(pdMS_TO_TICKS(100));
