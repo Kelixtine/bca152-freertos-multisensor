@@ -2,43 +2,201 @@
   "version": 1,
   "author": "Kelixtine",
   "editor": "wokwi",
+
   "parts": [
-    { "type": "board-esp32-devkit-c-v4", "id": "esp", "top": 120, "left": 0, "attrs": {} },
-    { "type": "wokwi-dht22", "id": "dht1", "top": -120, "left": 180, "attrs": {} },
-    { "type": "wokwi-photoresistor-sensor", "id": "ldr1", "top": -120, "left": -180, "attrs": {} },
-    { "type": "wokwi-pir-motion-sensor", "id": "pir1", "top": -120, "left": 0, "attrs": {} },
-    { "type": "wokwi-ky-040", "id": "encoder", "top": 280, "left": -180, "attrs": {} },
-    { "type": "board-ssd1306", "id": "oled", "top": 280, "left": 180, "attrs": {} },
-    { "type": "wokwi-buzzer", "id": "bz1", "top": 40, "left": 200, "attrs": { "hasVolume": "1" } }
+    {
+      "type": "board-esp32-devkit-c-v4",
+      "id": "esp",
+      "top": 80,
+      "left": 0,
+      "attrs": {}
+    },
+
+    {
+      "type": "wokwi-photoresistor-sensor",
+      "id": "ldr1",
+      "top": -140,
+      "left": -300,
+      "attrs": {}
+    },
+
+    {
+      "type": "wokwi-pir-motion-sensor",
+      "id": "pir1",
+      "top": -140,
+      "left": -40,
+      "attrs": {}
+    },
+
+    {
+      "type": "wokwi-dht22",
+      "id": "dht1",
+      "top": -140,
+      "left": 220,
+      "attrs": {}
+    },
+
+    {
+      "type": "wokwi-buzzer",
+      "id": "bz1",
+      "top": 60,
+      "left": 270,
+      "attrs": {
+        "hasVolume": "1"
+      }
+    },
+
+    {
+      "type": "wokwi-ky-040",
+      "id": "encoder",
+      "top": 300,
+      "left": -220,
+      "attrs": {}
+    },
+
+    {
+      "type": "board-ssd1306",
+      "id": "oled",
+      "top": 300,
+      "left": 180,
+      "attrs": {}
+    }
   ],
+
   "connections": [
-    [ "esp:TX", "$serialMonitor:RX", "", [] ],
-    [ "esp:RX", "$serialMonitor:TX", "", [] ],
+    [
+      "esp:TX",
+      "$serialMonitor:RX",
+      "",
+      []
+    ],
+    [
+      "esp:RX",
+      "$serialMonitor:TX",
+      "",
+      []
+    ],
 
-    [ "dht1:VCC", "esp:3V3", "red", [ "v0" ] ],
-    [ "dht1:GND", "esp:GND.1", "black", [ "v0" ] ],
-    [ "dht1:SDA", "esp:4", "green", [ "v0" ] ],
+    [ 
+      "dht1:VCC",
+      "esp:3V3",
+      "red",
+      [ "v0" ]
+    ],
+    [
+      "dht1:GND",
+      "esp:GND.1",
+      "black",
+      [ "v0" ]
+    ],
+    [
+      "dht1:SDA",
+      "esp:4",
+      "green",
+      [ "v0" ]
+    ],
 
-    [ "ldr1:VCC", "esp:3V3", "red", [ "v0" ] ],
-    [ "ldr1:GND", "esp:GND.1", "black", [ "v0" ] ],
-    [ "ldr1:AO", "esp:34", "blue", [ "v0" ] ],
+    [
+      "ldr1:VCC",
+      "esp:3V3",
+      "red",
+      [ "v0" ]
+    ],
+    [
+      "ldr1:GND",
+      "esp:GND.1",
+      "black",
+      [ "v0" ]
+    ],
+    [
+      "ldr1:AO",
+      "esp:34",
+      "blue",
+      [ "v0" ]
+    ],
 
-    [ "pir1:VCC", "esp:3V3", "red", [ "v0" ] ],
-    [ "pir1:GND", "esp:GND.1", "black", [ "v0" ] ],
-    [ "pir1:OUT", "esp:13", "purple", [ "v0" ] ],
+    [
+      "pir1:VCC",
+      "esp:3V3",
+      "red",
+      [ "v0" ]
+    ],
+    [
+      "pir1:GND",
+      "esp:GND.1",
+      "black",
+      [ "v0" ]
+    ],
+    [
+      "pir1:OUT",
+      "esp:13",
+      "purple",
+      [ "v0" ]
+    ],
 
-    [ "oled:VCC", "esp:3V3", "red", [ "v0" ] ],
-    [ "oled:GND", "esp:GND.2", "black", [ "v0" ] ],
-    [ "oled:SCL", "esp:22", "yellow", [ "v0" ] ],
-    [ "oled:SDA", "esp:21", "cyan", [ "v0" ] ],
+    [
+      "oled:VCC",
+      "esp:3V3",
+      "red",
+      [ "v0" ]
+    ],
+    [
+      "oled:GND",
+      "esp:GND.2",
+      "black",
+      [ "v0" ]
+    ],
+    [
+      "oled:SCL",
+      "esp:22",
+      "yellow",
+      [ "v0" ]
+    ],
+    [
+      "oled:SDA",
+      "esp:21",
+      "cyan",
+      [ "v0" ]
+    ],
 
-    [ "bz1:1", "esp:27", "orange", [ "v0" ] ],
-    [ "bz1:2", "esp:GND.2", "black", [ "v0" ] ],
+    [
+      "bz1:1",
+      "esp:27",
+      "orange",
+      [ "v0" ]
+    ],
+    [
+      "bz1:2",
+      "esp:GND.2",
+      "black",
+      [ "v0" ]
+    ],
 
-    [ "encoder:GND", "esp:GND.2", "black", [ "v0" ] ],
-    [ "encoder:+", "esp:3V3", "red", [ "v0" ] ],
-    [ "encoder:CLK", "esp:18", "gold", [ "v0" ] ],
-    [ "encoder:DT", "esp:19", "magenta", [ "v0" ] ]
+    [
+      "encoder:GND",
+      "esp:GND.2",
+      "black",
+      [ "v0" ]
+    ],
+    [
+      "encoder:+",
+      "esp:3V3",
+      "red",
+      [ "v0" ]
+    ],
+    [
+      "encoder:CLK",
+      "esp:18",
+      "gold",
+      [ "v0" ]
+    ],
+    [
+      "encoder:DT",
+      "esp:19",
+      "magenta",
+      [ "v0" ]
+    ]
   ],
+
   "dependencies": {}
 }
