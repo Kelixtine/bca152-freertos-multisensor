@@ -104,6 +104,18 @@ void test_inactive_motion_detected(void)
     );
 }
 
+void test_active_timeout_no_motion(void)
+{
+    TEST_ASSERT_EQUAL(
+        STATE_INACTIVE,
+        evaluateSystemState(
+            STATE_ACTIVE,
+            false,
+            true
+        )
+    );
+}
+
 int main(void)
 {
     UNITY_BEGIN();
@@ -122,6 +134,7 @@ int main(void)
     RUN_TEST(test_next_display_mode_humidity);
 
     RUN_TEST(test_inactive_motion_detected);
+    RUN_TEST(test_active_timeout_no_motion);
 
     return UNITY_END();
 }
