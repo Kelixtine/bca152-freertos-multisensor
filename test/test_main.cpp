@@ -1,6 +1,7 @@
 #include <unity.h>
 
 #include "alarm.h"
+#include "input.h"
 
 void setUp(void)
 {
@@ -50,6 +51,14 @@ void test_temp_above_upper(void)
     );
 }
 
+void test_next_display_mode(void)
+{
+    TEST_ASSERT_EQUAL(
+        MODE_HUMIDITY,
+        nextDisplayMode(MODE_TEMPERATURE)
+    );
+}
+
 int main(void)
 {
     UNITY_BEGIN();
@@ -59,6 +68,8 @@ int main(void)
     RUN_TEST(test_temp_normal);
     RUN_TEST(test_temp_exactly_upper);
     RUN_TEST(test_temp_above_upper);
+
+    RUN_TEST(test_next_display_mode);
 
     return UNITY_END();
 }
