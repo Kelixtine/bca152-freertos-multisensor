@@ -83,6 +83,14 @@ void test_previous_display_mode_normal(void)
     );
 }
 
+void test_next_display_mode_humidity(void)
+{
+    TEST_ASSERT_EQUAL(
+        MODE_LIGHT,
+        nextDisplayMode(MODE_HUMIDITY)
+    );
+}
+
 int main(void)
 {
     UNITY_BEGIN();
@@ -98,6 +106,8 @@ int main(void)
 
     RUN_TEST(test_previous_display_mode);
     RUN_TEST(test_previous_display_mode_normal);
+
+    RUN_TEST(test_next_display_mode_humidity);
 
     return UNITY_END();
 }
