@@ -1,30 +1,46 @@
 #include "input.h"
 #include "rtos_objects.h"
+#include "system_state.h"
+
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "freertos/event_groups.h"
 
-void vInputTask(void *pvParameters) {
+void vInputTask(void *pvParameters)
+{
     vTaskDelay(pdMS_TO_TICKS(100));
 
-    gpio_config_t io_conf = {};
-    io_conf.pin_bit_mask = (1ULL << ENCODER_CLK) | (1ULL << ENCODER_DT) | (1ULL << ENCODER_SW);
-    io_conf.mode = GPIO_MODE_INPUT;
-    io_conf.pull_up_en = GPIO_PULLUP_ENABLE;
-    io_conf.pull_down_en = GPIO_PULLDOWN_DISABLE;
-    io_conf.intr_type = GPIO_INTR_DISABLE;
-    gpio_config(&io_conf);
+    gpio_config_t io = {};
+    io.pin_bit_mask =
+        (1ULL << ENCODER_CLK) |
+        (1ULL << ENCODER_DT) |
+        (1ULL << ENCODER_SW);
 
-    int lastClk = gpio_get_level(ENCODER_CLK);
+    io.mode = GPIO_MODE_INPUT;
+    io.pull_up_en = GPIO_PULLUP_ENABLE;
+    gpio_config(&io);
 
-    while (1) {
-        int currentClk = gpio_get_level(ENCODER_CLK);
-        if (lastClk == 1 && currentClk == 0) {
-            NavDirection dir = (gpio_get_level(ENCODER_DT) != currentClk) 
-                               ? NavDirection::NEXT 
-                               : NavDirection::PREVIOUS;
+    int lastCLK = gpio_get_level(ENCODER_CLK);
+
+    while (1)
+    {
+        int clk = gpio_get_level(ENCODER_CLK);
+
+        if (lastCLK == 1 && clk == 0)
+        {
+            NavDirection dir =
+                (gpio_get_level(ENCODER_DT) != clk)
+                    ? NavDirection::NEXT
+                    : NavDirection::PREVIOUS;
+
+            // Keep OLED awake while rotating
+            g_systemState = SystemState::ACTIVE;
+            xEventGroupSetBits(g_systemEvents, EVENT_ACTIVE);
+
             xQueueSend(navQueue, &dir, 0);
         }
-        lastClk = currentClk;
+
+        lastCLK = clk;
         vTaskDelay(pdMS_TO_TICKS(10));
     }
 }
