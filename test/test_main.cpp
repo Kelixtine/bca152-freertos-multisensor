@@ -75,6 +75,14 @@ void test_previous_display_mode(void)
     );
 }
 
+void test_previous_display_mode_normal(void)
+{
+    TEST_ASSERT_EQUAL(
+        MODE_TEMPERATURE,
+        previousDisplayMode(MODE_HUMIDITY)
+    );
+}
+
 int main(void)
 {
     UNITY_BEGIN();
@@ -87,7 +95,9 @@ int main(void)
 
     RUN_TEST(test_next_display_mode);
     RUN_TEST(test_next_display_mode_wrap);
+
     RUN_TEST(test_previous_display_mode);
+    RUN_TEST(test_previous_display_mode_normal);
 
     return UNITY_END();
 }
