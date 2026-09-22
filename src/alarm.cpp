@@ -8,13 +8,13 @@
 
 AlarmState evaluateTemperature(float temperature)
 {
-    if (temperature <= LOWER_TEMP_THRESHOLD ||
-        temperature >= UPPER_TEMP_THRESHOLD)
-    {
-        return AlarmState::ALARM;
-    }
+    if (temperature <= TEMP_LOW_THRESHOLD)
+        return ALARM_LOW_TEMPERATURE;
 
-    return AlarmState::NORMAL;
+    if (temperature >= TEMP_HIGH_THRESHOLD)
+        return ALARM_HIGH_TEMPERATURE;
+
+    return ALARM_NORMAL;
 }
 
 void alarm_task(void *pvParameters)
@@ -32,13 +32,12 @@ void alarm_task(void *pvParameters)
         if (sensorQueue != NULL)
             xQueueReceive(sensorQueue, &data, 0);
 
-        bool alarmActive =
-            (evaluateTemperature(data.temperature) == AlarmState::ALARM);
+        AlarmState state = evaluateTemperature(data.temperature);
 
-        // Active buzzer: HIGH = sound, LOW = silent
+        bool alarmActive = (state != ALARM_NORMAL);
+
         gpio_set_level(BUZZER_PIN, alarmActive ? 1 : 0);
 
-        // Print only when state changes
         if (alarmActive != lastAlarmState)
         {
             if (alarmActive)
