@@ -19,6 +19,7 @@ AlarmState evaluateTemperature(float temperature)
 
 void alarm_task(void *pvParameters)
 {
+    // PWM for Wokwi passive buzzer
     ledc_timer_config_t timer = {};
     timer.speed_mode = LEDC_LOW_SPEED_MODE;
     timer.timer_num = LEDC_TIMER_0;
@@ -31,24 +32,25 @@ void alarm_task(void *pvParameters)
     channel.gpio_num = BUZZER_PIN;
     channel.speed_mode = LEDC_LOW_SPEED_MODE;
     channel.channel = LEDC_CHANNEL_0;
-    channel.intr_type = LEDC_INTR_DISABLE;
     channel.timer_sel = LEDC_TIMER_0;
     channel.duty = 0;
     channel.hpoint = 0;
     ledc_channel_config(&channel);
 
     SensorData data = {};
-    bool lastState = false;
+    bool lastAlarm = false;
 
     while (true)
     {
+        // Read latest sensor value WITHOUT removing it
         if (sensorQueue != NULL)
-            xQueueReceive(sensorQueue, &data, 0);
+            xQueuePeek(sensorQueue, &data, portMAX_DELAY);
 
-        AlarmState state = evaluateTemperature(data.temperature);
-        bool alarmActive = (state != ALARM_NORMAL);
+        bool alarm =
+            (data.temperature >= TEMP_HIGH_THRESHOLD) ||
+            (data.temperature <= TEMP_LOW_THRESHOLD);
 
-        if (alarmActive)
+        if (alarm)
         {
             ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, 512);
             ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0);
@@ -59,14 +61,15 @@ void alarm_task(void *pvParameters)
             ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0);
         }
 
-        if (alarmActive != lastState)
+        // Print only when state changes
+        if (alarm != lastAlarm)
         {
-            if (alarmActive)
+            if (alarm)
                 safe_log("[AlarmTask] Activated");
             else
                 safe_log("[AlarmTask] Deactivated");
 
-            lastState = alarmActive;
+            lastAlarm = alarm;
         }
 
         vTaskDelay(pdMS_TO_TICKS(50));
