@@ -42,6 +42,14 @@ void test_temp_exactly_upper(void)
     );
 }
 
+void test_temp_above_upper(void)
+{
+    TEST_ASSERT_EQUAL(
+        ALARM_HIGH_TEMPERATURE,
+        evaluateTemperature(35.0f)
+    );
+}
+
 int main(void)
 {
     UNITY_BEGIN();
@@ -50,6 +58,7 @@ int main(void)
     RUN_TEST(test_temp_exactly_lower);
     RUN_TEST(test_temp_normal);
     RUN_TEST(test_temp_exactly_upper);
+    RUN_TEST(test_temp_above_upper);
 
     return UNITY_END();
 }
