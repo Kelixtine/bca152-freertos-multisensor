@@ -33,7 +33,7 @@ void vInputTask(void *pvParameters)
                     ? NavDirection::NEXT
                     : NavDirection::PREVIOUS;
 
-            // Keep OLED awake while rotating
+            gLastActivityTick = xTaskGetTickCount();
             g_systemState = SystemState::ACTIVE;
             xEventGroupSetBits(g_systemEvents, EVENT_ACTIVE);
 
