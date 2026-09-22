@@ -1,3 +1,4 @@
+
 #include <stdio.h>
 #include <string.h>
 #include <stdbool.h>
@@ -16,6 +17,7 @@
 #include "esp_timer.h"
 
 #include "ssd1306.h"
+#include "dht.h"
 
 // ---------------- PINS ----------------
 #define SDA_PIN 21
@@ -24,6 +26,8 @@
 #define PIR_PIN 19
 #define ENC_CLK 25
 #define ENC_DT 26
+#define DHT_PIN 4
+#define DHT_TYPE DHT_TYPE_DHT22
 #define LDR_CHANNEL ADC_CHANNEL_6
 
 // ---------------- EVENT GROUP ----------------
@@ -84,7 +88,6 @@ void ldrTask(void *pv)
             lastMotionTime = esp_timer_get_time();
             xEventGroupSetBits(eventGroup, EVENT_ACTIVE);
 
-            // Print ONLY when light changes
             xSemaphoreTake(serialMutex, portMAX_DELAY);
             printf("[LDR] %d\n", light);
             xSemaphoreGive(serialMutex);
@@ -97,12 +100,12 @@ void ldrTask(void *pv)
 
         xQueueSend(sensorQueue, &data, portMAX_DELAY);
 
-       vTaskDelay(pdMS_TO_TICKS(50));
+        vTaskDelay(pdMS_TO_TICKS(50));
     }
 }
 
 // =====================================================
-// DHT TASK
+// DHT TASK (LIVE VALUES)
 // =====================================================
 void dhtTask(void *pv)
 {
@@ -110,17 +113,21 @@ void dhtTask(void *pv)
 
     while (1)
     {
-        strcpy(data.sensor, "DHT");
-        data.value1 = 24.0;
-        data.value2 = 40.0;
+        float temp = 0;
+        float hum = 0;
 
-        xQueueSend(sensorQueue, &data, portMAX_DELAY);
+        if (dht_read_float_data(DHT_TYPE, DHT_PIN, &hum, &temp) == ESP_OK)
+        {
+            strcpy(data.sensor, "DHT");
+            data.value1 = temp;
+            data.value2 = hum;
 
-        xSemaphoreTake(serialMutex, portMAX_DELAY);
-        printf("[DHT] Temp: %.1f  Hum: %.1f\n",
-               data.value1,
-               data.value2);
-        xSemaphoreGive(serialMutex);
+            xQueueSend(sensorQueue, &data, portMAX_DELAY);
+
+            xSemaphoreTake(serialMutex, portMAX_DELAY);
+            printf("[DHT] Temp: %.1f  Hum: %.1f\n", temp, hum);
+            xSemaphoreGive(serialMutex);
+        }
 
         vTaskDelay(pdMS_TO_TICKS(2000));
     }
@@ -166,7 +173,7 @@ void inputTask(void *pv)
 }
 
 // =====================================================
-// PIR MOTION
+// PIR TASK
 // =====================================================
 void motionTask(void *pv)
 {
@@ -218,7 +225,7 @@ void motionTask(void *pv)
 }
 
 // =====================================================
-// DISPLAY
+// DISPLAY + BUZZER
 // =====================================================
 void displayTask(void *pv)
 {
@@ -228,6 +235,7 @@ void displayTask(void *pv)
     DisplayMode lastPage = TEMPERATURE;
     bool lastMotion = false;
     bool wasActive = true;
+    bool buzzerOn = false;
 
     float shownTemp = -999;
     float shownHum = -999;
@@ -262,7 +270,8 @@ void displayTask(void *pv)
             }
         }
 
-        if (latestLight < 500)
+        // Alarm based on temperature
+        if (latestTemp < 18 || latestTemp > 30)
             xEventGroupSetBits(eventGroup, EVENT_ALARM);
         else
             xEventGroupClearBits(eventGroup, EVENT_ALARM);
@@ -308,56 +317,65 @@ void displayTask(void *pv)
             switch (currentPage)
             {
                 case TEMPERATURE:
-                    ssd1306_display_text(&dev,0,
-                        "TEMPERATURE",11,false);
+                    ssd1306_display_text(&dev,0,"TEMPERATURE",11,false);
                     sprintf(line,"%.1f C",latestTemp);
                     shownTemp = latestTemp;
                     break;
 
                 case HUMIDITY:
-                    ssd1306_display_text(&dev,0,
-                        "HUMIDITY",8,false);
+                    ssd1306_display_text(&dev,0,"HUMIDITY",8,false);
                     sprintf(line,"%.1f %%",latestHum);
                     shownHum = latestHum;
                     break;
 
                 case LIGHT:
-                    ssd1306_display_text(&dev,0,
-                        "LIGHT",5,false);
+                    ssd1306_display_text(&dev,0,"LIGHT",5,false);
                     sprintf(line,"%d",latestLight);
                     shownLight = latestLight;
                     break;
 
                 case MOTION:
-                    ssd1306_display_text(&dev,0,
-                        "MOTION",6,false);
+                    ssd1306_display_text(&dev,0,"MOTION",6,false);
                     sprintf(line,"%s",
-                        motionDetected ?
-                        "DETECTED" :
-                        "NONE");
+                            motionDetected ? "DETECTED" : "NONE");
                     break;
             }
 
-            ssd1306_display_text(&dev,2,
-                line,
-                strlen(line),
-                false);
+            ssd1306_display_text(&dev,2,line,strlen(line),false);
         }
 
+        // Buzzer + terminal messages
         if (bits & EVENT_ALARM)
-            ledc_set_duty(
-                LEDC_LOW_SPEED_MODE,
-                LEDC_CHANNEL_0,
-                512);
-        else
-            ledc_set_duty(
-                LEDC_LOW_SPEED_MODE,
-                LEDC_CHANNEL_0,
-                0);
+        {
+            ledc_set_duty(LEDC_LOW_SPEED_MODE,
+                          LEDC_CHANNEL_0,
+                          512);
 
-        ledc_update_duty(
-            LEDC_LOW_SPEED_MODE,
-            LEDC_CHANNEL_0);
+            if (!buzzerOn)
+            {
+                xSemaphoreTake(serialMutex, portMAX_DELAY);
+                printf("[BUZZER] Activated\n");
+                xSemaphoreGive(serialMutex);
+                buzzerOn = true;
+            }
+        }
+        else
+        {
+            ledc_set_duty(LEDC_LOW_SPEED_MODE,
+                          LEDC_CHANNEL_0,
+                          0);
+
+            if (buzzerOn)
+            {
+                xSemaphoreTake(serialMutex, portMAX_DELAY);
+                printf("[BUZZER] Deactivated\n");
+                xSemaphoreGive(serialMutex);
+                buzzerOn = false;
+            }
+        }
+
+        ledc_update_duty(LEDC_LOW_SPEED_MODE,
+                         LEDC_CHANNEL_0);
 
         vTaskDelay(pdMS_TO_TICKS(50));
     }
@@ -384,10 +402,9 @@ void app_main(void)
         .atten = ADC_ATTEN_DB_12
     };
 
-    adc_oneshot_config_channel(
-        adc_handle,
-        LDR_CHANNEL,
-        &chan_cfg);
+    adc_oneshot_config_channel(adc_handle,
+                               LDR_CHANNEL,
+                               &chan_cfg);
 
     i2c_master_init(&dev,
                     SDA_PIN,
@@ -421,38 +438,9 @@ void app_main(void)
 
     printf("Part XI Started\n");
 
-    xTaskCreate(ldrTask,
-                "LDR",
-                4096,
-                NULL,
-                1,
-                NULL);
-
-    xTaskCreate(dhtTask,
-                "DHT",
-                4096,
-                NULL,
-                1,
-                NULL);
-
-    xTaskCreate(inputTask,
-                "INPUT",
-                4096,
-                NULL,
-                1,
-                NULL);
-
-    xTaskCreate(motionTask,
-                "PIR",
-                4096,
-                NULL,
-                1,
-                NULL);
-
-    xTaskCreate(displayTask,
-                "OLED",
-                4096,
-                NULL,
-                1,
-                NULL);
+    xTaskCreate(ldrTask, "LDR", 4096, NULL, 1, NULL);
+    xTaskCreate(dhtTask, "DHT", 4096, NULL, 1, NULL);
+    xTaskCreate(inputTask, "INPUT", 4096, NULL, 1, NULL);
+    xTaskCreate(motionTask, "PIR", 4096, NULL, 1, NULL);
+    xTaskCreate(displayTask, "OLED", 4096, NULL, 1, NULL);
 }
