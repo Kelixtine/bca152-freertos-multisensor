@@ -12,20 +12,22 @@
 
 void vMotionTask(void *pvParameters)
 {
-    gpio_config_t pir_conf = {};
-    pir_conf.pin_bit_mask = (1ULL << PIR_SENSOR_PIN);
-    pir_conf.mode = GPIO_MODE_INPUT;
-    pir_conf.pull_down_en = GPIO_PULLDOWN_ENABLE;
-    gpio_config(&pir_conf);
+    gpio_config_t pir = {};
+    pir.pin_bit_mask = (1ULL << PIR_SENSOR_PIN);
+    pir.mode = GPIO_MODE_INPUT;
+    pir.pull_down_en = GPIO_PULLDOWN_ENABLE;
+    gpio_config(&pir);
 
-    TickType_t lastMotionTime = xTaskGetTickCount();
+    TickType_t lastActivity = xTaskGetTickCount();
     const TickType_t timeout = pdMS_TO_TICKS(15000);
 
     while (1)
     {
+        EventBits_t bits = xEventGroupGetBits(g_systemEvents);
+
         if (gpio_get_level(PIR_SENSOR_PIN))
         {
-            lastMotionTime = xTaskGetTickCount();
+            lastActivity = xTaskGetTickCount();
             g_systemState = SystemState::ACTIVE;
 
             xEventGroupSetBits(g_systemEvents,
@@ -33,12 +35,14 @@ void vMotionTask(void *pvParameters)
         }
         else
         {
-            xEventGroupClearBits(g_systemEvents,
-                                 EVENT_MOTION);
+            xEventGroupClearBits(g_systemEvents, EVENT_MOTION);
         }
 
-        if (g_systemState == SystemState::ACTIVE &&
-            (xTaskGetTickCount() - lastMotionTime) >= timeout)
+        // Any user interaction refreshes timeout
+        if (bits & EVENT_ACTIVE)
+            lastActivity = xTaskGetTickCount();
+
+        if ((xTaskGetTickCount() - lastActivity) >= timeout)
         {
             g_systemState = SystemState::INACTIVE;
 

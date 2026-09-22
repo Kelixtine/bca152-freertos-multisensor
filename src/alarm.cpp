@@ -1,12 +1,11 @@
 #include "alarm.h"
 #include "rtos_objects.h"
-#include "sensors.h"
+#include "driver/gpio.h"
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/event_groups.h"
 
-#include "driver/gpio.h"
 #include <stdio.h>
 
 #define BUZZER_PIN GPIO_NUM_14
@@ -29,24 +28,21 @@ void vAlarmTask(void *pvParameters)
     io.mode = GPIO_MODE_OUTPUT;
     gpio_config(&io);
 
-    bool lastState = false;
+    bool previous = false;
 
     while (1)
     {
-        bool alarm = (xEventGroupGetBits(g_systemEvents) & EVENT_ALARM);
+        bool active = xEventGroupGetBits(g_systemEvents) & EVENT_ALARM;
 
-        gpio_set_level(BUZZER_PIN, alarm);
+        gpio_set_level(BUZZER_PIN, active);
 
-        if (alarm != lastState)
+        if (active != previous)
         {
-            if (alarm)
-                printf("[BUZZER] Activated\n");
-            else
-                printf("[BUZZER] Deactivated\n");
-
-            lastState = alarm;
+            printf("[BUZZER] %s\n",
+                   active ? "Activated" : "Deactivated");
+            previous = active;
         }
 
-        vTaskDelay(pdMS_TO_TICKS(100));
+        vTaskDelay(pdMS_TO_TICKS(50));
     }
 }
