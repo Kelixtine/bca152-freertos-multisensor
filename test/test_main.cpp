@@ -128,6 +128,18 @@ void test_active_no_timeout(void)
     );
 }
 
+void test_inactive_no_motion(void)
+{
+    TEST_ASSERT_EQUAL(
+        STATE_INACTIVE,
+        evaluateSystemState(
+            STATE_INACTIVE,
+            false,
+            false
+        )
+    );
+}
+
 int main(void)
 {
     UNITY_BEGIN();
@@ -148,6 +160,7 @@ int main(void)
     RUN_TEST(test_inactive_motion_detected);
     RUN_TEST(test_active_timeout_no_motion);
     RUN_TEST(test_active_no_timeout);
+    RUN_TEST(test_inactive_no_motion);
 
     return UNITY_END();
 }
