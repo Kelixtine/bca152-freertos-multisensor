@@ -1,7 +1,0 @@
--Wno-frame-address
--mlongcalls
--fno-builtin-memcpy
--fno-builtin-memset
--fno-builtin-bzero
-"-specs=C:/Users/User/Documents/bca152-freertos-multisensor/.pio/build/esp32dev/specs/picolibc.specs"
--fno-rtti

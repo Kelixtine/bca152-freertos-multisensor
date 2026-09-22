@@ -1,3 +1,3 @@
-cmake_minimum_required(VERSION 3.16.0)
+cmake_minimum_required(VERSION 3.16)
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
-project(bca152-freertos-multisensor)
+project(bca152-freertos-multisensor VERSION "1.0.0")
