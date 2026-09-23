@@ -2,9 +2,13 @@
 #define ALARM_H
 
 #include <stdbool.h>
-#include "driver/gpio.h"
 
+#ifndef UNIT_TESTING
+#include "driver/gpio.h"
 #define BUZZER_PIN GPIO_NUM_27
+#else
+#define BUZZER_PIN 27
+#endif
 
 #define TEMP_LOW_THRESHOLD 18.0f
 #define TEMP_HIGH_THRESHOLD 30.0f
@@ -20,6 +24,7 @@ extern "C" {
 #endif
 
 AlarmState evaluateTemperature(float temperature);
+
 void alarm_task(void *pvParameters);
 
 #ifdef __cplusplus

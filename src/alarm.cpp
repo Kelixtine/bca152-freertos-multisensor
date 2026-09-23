@@ -1,10 +1,4 @@
 #include "alarm.h"
-#include "rtos_objects.h"
-#include "sensors.h"
-
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
-#include "driver/ledc.h"
 
 AlarmState evaluateTemperature(float temperature)
 {
@@ -17,6 +11,15 @@ AlarmState evaluateTemperature(float temperature)
     return ALARM_NORMAL;
 }
 
+#ifndef UNIT_TESTING
+
+#include "rtos_objects.h"
+#include "sensors.h"
+
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "driver/ledc.h"
+
 void alarm_task(void *pvParameters)
 {
     // PWM for Wokwi passive buzzer
@@ -26,6 +29,7 @@ void alarm_task(void *pvParameters)
     timer.duty_resolution = LEDC_TIMER_10_BIT;
     timer.freq_hz = 2000;
     timer.clk_cfg = LEDC_AUTO_CLK;
+
     ledc_timer_config(&timer);
 
     ledc_channel_config_t channel = {};
@@ -35,6 +39,7 @@ void alarm_task(void *pvParameters)
     channel.timer_sel = LEDC_TIMER_0;
     channel.duty = 0;
     channel.hpoint = 0;
+
     ledc_channel_config(&channel);
 
     SensorData data = {};
@@ -52,13 +57,29 @@ void alarm_task(void *pvParameters)
 
         if (alarm)
         {
-            ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, 512);
-            ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0);
+            ledc_set_duty(
+                LEDC_LOW_SPEED_MODE,
+                LEDC_CHANNEL_0,
+                512
+            );
+
+            ledc_update_duty(
+                LEDC_LOW_SPEED_MODE,
+                LEDC_CHANNEL_0
+            );
         }
         else
         {
-            ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, 0);
-            ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0);
+            ledc_set_duty(
+                LEDC_LOW_SPEED_MODE,
+                LEDC_CHANNEL_0,
+                0
+            );
+
+            ledc_update_duty(
+                LEDC_LOW_SPEED_MODE,
+                LEDC_CHANNEL_0
+            );
         }
 
         // Print only when state changes
@@ -75,3 +96,5 @@ void alarm_task(void *pvParameters)
         vTaskDelay(pdMS_TO_TICKS(50));
     }
 }
+
+#endif
