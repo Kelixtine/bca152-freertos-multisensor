@@ -14,14 +14,19 @@ static TickType_t lastMotionTick = 0;
 void motion_task(void *pvParameters)
 {
     gpio_config_t io_conf = {};
+
     io_conf.pin_bit_mask = (1ULL << PIR_PIN);
     io_conf.mode = GPIO_MODE_INPUT;
     io_conf.pull_down_en = GPIO_PULLDOWN_ENABLE;
+
     gpio_config(&io_conf);
 
     lastMotionTick = xTaskGetTickCount();
 
-    xEventGroupSetBits(systemEvents, EVENT_ACTIVE);
+    xEventGroupSetBits(
+        systemEvents,
+        EVENT_ACTIVE
+    );
 
     safe_log("[MotionTask] System ACTIVE");
 
@@ -32,6 +37,16 @@ void motion_task(void *pvParameters)
         if (motion)
         {
             lastMotionTick = xTaskGetTickCount();
+
+            EventBits_t currentBits =
+                xEventGroupGetBits(systemEvents);
+
+            if (!(currentBits & EVENT_ACTIVE))
+            {
+                safe_log(
+                    "[MotionTask] Motion detected -> ACTIVE"
+                );
+            }
 
             xEventGroupSetBits(
                 systemEvents,
