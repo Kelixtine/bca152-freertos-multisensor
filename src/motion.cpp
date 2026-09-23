@@ -20,7 +20,10 @@ void motion_task(void *pvParameters)
     gpio_config(&io_conf);
 
     lastMotionTick = xTaskGetTickCount();
+
     xEventGroupSetBits(systemEvents, EVENT_ACTIVE);
+
+    safe_log("[MotionTask] System ACTIVE");
 
     while (true)
     {
@@ -29,18 +32,38 @@ void motion_task(void *pvParameters)
         if (motion)
         {
             lastMotionTick = xTaskGetTickCount();
-            xEventGroupSetBits(systemEvents, EVENT_ACTIVE | EVENT_MOTION);
+
+            xEventGroupSetBits(
+                systemEvents,
+                EVENT_ACTIVE | EVENT_MOTION
+            );
         }
         else
         {
-            xEventGroupClearBits(systemEvents, EVENT_MOTION);
+            xEventGroupClearBits(
+                systemEvents,
+                EVENT_MOTION
+            );
 
             TickType_t elapsed =
                 xTaskGetTickCount() - lastMotionTick;
 
             if (elapsed >= pdMS_TO_TICKS(INACTIVITY_MS))
             {
-                xEventGroupClearBits(systemEvents, EVENT_ACTIVE);
+                EventBits_t currentBits =
+                    xEventGroupGetBits(systemEvents);
+
+                if (currentBits & EVENT_ACTIVE)
+                {
+                    xEventGroupClearBits(
+                        systemEvents,
+                        EVENT_ACTIVE
+                    );
+
+                    safe_log(
+                        "[MotionTask] Inactivity timeout -> INACTIVE"
+                    );
+                }
             }
         }
 
