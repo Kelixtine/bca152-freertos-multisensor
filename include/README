@@ -1,37 +1,460 @@
+# Real-Time Multisensor Room Monitoring System
 
-This directory is intended for project header files.
+## Project Overview
 
-A header file is a file containing C declarations and macro definitions
-to be shared between several project source files. You request the use of a
-header file in your project source file (C, C++, etc) located in `src` folder
-by including it, with the C preprocessing directive `#include'.
+The Real-Time Multisensor Room Monitoring System is a simulated ESP32-based room-monitoring system developed for BCA152 - Microcontrollers.
 
-```src/main.c
+The system monitors temperature, humidity, ambient light, and motion while providing user interaction through a rotary encoder and displaying information through an SSD1306 OLED display. A buzzer provides temperature alarm feedback.
 
-#include "header.h"
+The project is implemented using the Espressif IoT Development Framework (ESP-IDF) and native FreeRTOS APIs. The system is designed as a concurrent embedded application using multiple FreeRTOS tasks, queues, a mutex, an event group, task priorities, periodic execution, and an ACTIVE/INACTIVE state machine.
 
-int main (void)
-{
- ...
-}
+The system was developed and tested using PlatformIO and the Wokwi Virtual System Simulator.
+
+**Platform:** Espressif ESP32  
+**Framework:** ESP-IDF  
+**RTOS:** FreeRTOS  
+**Language:** C/C++  
+**Simulation:** Wokwi  
+**Course:** BCA152 - Microcontrollers  
+**Institution:** Mindanao State University - Iligan Institute of Technology  
+**Author:** Emmery Kelsey V. Mendoza
+
+---
+
+## Features
+
+- Temperature monitoring using DHT22
+- Humidity monitoring using DHT22
+- Ambient-light monitoring using an LDR
+- Motion detection using a PIR sensor
+- OLED display using SSD1306
+- Rotary encoder navigation
+- Temperature alarm using a buzzer
+- ACTIVE and INACTIVE system states
+- Automatic inactivity timeout
+- Automatic reactivation through motion
+- Multiple FreeRTOS tasks
+- Explicit FreeRTOS task priorities
+- FreeRTOS queue communication
+- FreeRTOS mutex protection
+- FreeRTOS event group signaling
+- Periodic task execution using `vTaskDelayUntil()`
+- Hardware-independent decision logic
+- Native automated unit testing
+- Wokwi functional verification
+- PlatformIO static code analysis
+- Git and GitHub version control
+
+---
+
+## Learning Objectives
+
+This project demonstrates the following embedded-systems concepts:
+
+- Creating an ESP32 project using PlatformIO
+- Using ESP-IDF with native FreeRTOS APIs
+- Constructing and simulating an ESP32 circuit in Wokwi
+- Interfacing sensors and actuators with an ESP32
+- Organizing firmware into multiple source modules
+- Creating and managing FreeRTOS tasks
+- Assigning task priorities
+- Using `vTaskDelayUntil()` for periodic execution
+- Using queues for inter-task communication
+- Using a mutex to protect a shared resource
+- Using an event group for event signaling
+- Implementing an embedded-system state machine
+- Separating hardware-independent decision logic from hardware drivers
+- Writing and executing automated unit tests
+- Performing static code analysis
+- Using Git incrementally during development
+- Documenting a technical embedded-systems project
+
+---
+
+## System Architecture
+
+The ESP32 is the main microcontroller of the system.
+
+The system receives information from the DHT22, LDR, PIR sensor, and rotary encoder. The ESP32 processes the information using multiple FreeRTOS tasks.
+
+The system provides output through the SSD1306 OLED display, buzzer, and serial monitor.
+
+### System Components
+
+**Inputs:**
+
+- DHT22 temperature and humidity sensor
+- LDR / photoresistor for ambient light
+- PIR sensor for motion detection
+- Rotary encoder for user input
+
+**Outputs:**
+
+- SSD1306 OLED display
+- Buzzer
+- Serial monitor
+
+![System Architecture](docs/images/system-architecture.png)
+
+**Figure 1. System Architecture Diagram**
+
+---
+
+## FreeRTOS Architecture
+
+The system is organized as a concurrent FreeRTOS application with five primary tasks.
+
+| Task | Responsibility | Priority |
+|---|---|---:|
+| SensorTask | Reads temperature, humidity, and light measurements | 2 |
+| DisplayTask | Manages and updates the OLED display | 1 |
+| InputTask | Processes rotary encoder navigation | 3 |
+| MotionTask | Monitors PIR activity and system state | 3 |
+| AlarmTask | Evaluates temperature alarm state and controls buzzer | 2 |
+
+The tasks communicate through FreeRTOS mechanisms instead of placing the entire application inside a single task.
+
+`SensorTask` periodically obtains sensor information and sends sensor data through a queue.
+
+`InputTask` processes rotary encoder navigation and communicates display-mode changes.
+
+`MotionTask` monitors the PIR sensor and handles ACTIVE/INACTIVE state transitions. It uses `vTaskDelayUntil()` for periodic execution.
+
+`DisplayTask` manages the OLED and responds to sensor and display-mode information.
+
+`AlarmTask` evaluates temperature values and controls the buzzer according to the configured temperature limits.
+
+![FreeRTOS Architecture](docs/images/freertos-architecture.png)
+
+**Figure 2. FreeRTOS Task-Communication Diagram**
+
+---
+
+## Hardware / Simulated Components
+
+The following components are used in the Wokwi simulation:
+
+| Component | Purpose |
+|---|---|
+| ESP32 | Main microcontroller |
+| DHT22 | Temperature and humidity measurement |
+| Photoresistor / LDR | Ambient-light measurement |
+| PIR sensor | Motion detection |
+| Rotary encoder | User input |
+| SSD1306 OLED | Information display |
+| Buzzer | Temperature alarm output |
+
+The Wokwi simulation provides the virtual hardware environment used for development and functional verification.
+
+---
+
+## Pin Configuration
+
+| Component | ESP32 Pin |
+|---|---|
+| DHT22 | GPIO 4 |
+| PIR Sensor | GPIO 33 |
+| LDR | GPIO 34 |
+| Rotary Encoder CLK | GPIO 25 |
+| Rotary Encoder DT | GPIO 26 |
+| Rotary Encoder SW | GPIO 27 |
+| OLED SDA | GPIO 21 |
+| OLED SCL | GPIO 22 |
+| Buzzer | GPIO 14 |
+
+The OLED uses I2C communication with GPIO 21 as SDA and GPIO 22 as SCL.
+
+---
+
+## Task Design
+
+### SensorTask
+
+`SensorTask` periodically obtains temperature, humidity, and ambient-light information.
+
+The sensor measurements are placed into the sensor queue so that other tasks can process the data without directly depending on the sensor-reading implementation.
+
+### DisplayTask
+
+`DisplayTask` manages the OLED display.
+
+The display provides four selectable modes:
+
+1. Temperature
+2. Humidity
+3. Light
+4. Motion
+
+The display is also controlled by the system activity state. When the system becomes INACTIVE after the inactivity timeout, the OLED is turned off.
+
+### InputTask
+
+`InputTask` processes the rotary encoder.
+
+Clockwise rotation moves to the next display mode, while counterclockwise rotation moves to the previous display mode.
+
+The navigation wraps around the available display modes.
+
+### MotionTask
+
+`MotionTask` monitors the PIR sensor.
+
+The task uses `vTaskDelayUntil()` to maintain periodic execution.
+
+When motion is detected, the system becomes ACTIVE.
+
+When the system remains ACTIVE without motion for the configured inactivity period, the system transitions to INACTIVE.
+
+### AlarmTask
+
+`AlarmTask` evaluates temperature conditions and controls the buzzer.
+
+The configured temperature limits are:
+
+- Below 18 °C: LOW TEMPERATURE
+- 18 °C to 30 °C: NORMAL
+- Above 30 °C: HIGH TEMPERATURE
+
+---
+
+## Inter-Task Communication
+
+The project uses several FreeRTOS mechanisms for communication and synchronization.
+
+### Sensor Queue
+
+The sensor queue transfers sensor data from the sensor-producing task to tasks that require the measurements.
+
+### Display Mode Queue
+
+The display mode queue allows encoder input to communicate navigation changes to the display system.
+
+### Mutex
+
+A mutex protects serial output.
+
+Since multiple FreeRTOS tasks can produce diagnostic messages, the mutex prevents simultaneous access to the shared serial resource.
+
+### Event Group
+
+The system event group is used for signaling system events, including motion and activity-state events.
+
+These mechanisms provide communication and synchronization between the tasks.
+
+---
+
+## State Machine
+
+The system uses two primary states:
+
+- `ACTIVE`
+- `INACTIVE`
+
+### ACTIVE State
+
+In the ACTIVE state, the system operates normally.
+
+Sensor monitoring continues, the OLED can display the selected measurement, and the alarm system continues evaluating temperature.
+
+If no motion is detected for the configured inactivity period, the system transitions to INACTIVE.
+
+### INACTIVE State
+
+In the INACTIVE state, the OLED display is turned off after the inactivity timeout.
+
+Motion detection remains active.
+
+When the PIR detects motion while the system is INACTIVE, the system transitions back to ACTIVE.
+
+![State Machine](docs/images/state-machine.png)
+
+**Figure 3. ACTIVE/INACTIVE State Machine**
+
+---
+
+## Repository Structure
+
+```text
+bca152-freertos-multisensor/
+│
+├── include/
+│   ├── alarm.h
+│   ├── display.h
+│   ├── input.h
+│   ├── motion.h
+│   ├── rtos_objects.h
+│   ├── sensors.h
+│   └── system_state.h
+│
+├── lib/
+│
+├── src/
+│   ├── main.cpp
+│   ├── alarm.cpp
+│   ├── display.cpp
+│   ├── input.cpp
+│   ├── motion.cpp
+│   ├── rtos_objects.cpp
+│   ├── sensors.cpp
+│   └── system_state.cpp
+│
+├── test/
+│   └── test_main.cpp
+│
+├── docs/
+│   ├── laboratory-report.md
+│   ├── laboratory-report.pdf
+│   └── images/
+│       ├── system-architecture.png
+│       ├── freertos-architecture.png
+│       ├── state-machine.png
+│       ├── finished-system.png
+│       └── native-tests-14-passed.png
+│
+├── diagram.json
+├── platformio.ini
+├── wokwi.toml
+└── README.md
 ```
 
-Including a header file produces the same results as copying the header file
-into each source file that needs it. Such copying would be time-consuming
-and error-prone. With a header file, the related declarations appear
-in only one place. If they need to be changed, they can be changed in one
-place, and programs that include the header file will automatically use the
-new version when next recompiled. The header file eliminates the labor of
-finding and changing all the copies as well as the risk that a failure to
-find one copy will result in inconsistencies within a program.
+---
 
-In C, the convention is to give header files names that end with `.h'.
+## Getting Started
 
-Read more about using header files in official GCC documentation:
+### Prerequisites
 
-* Include Syntax
-* Include Operation
-* Once-Only Headers
-* Computed Includes
+- Visual Studio Code
+- PlatformIO IDE Extension
+- Wokwi Simulator Extension
+- Git
 
-https://gcc.gnu.org/onlinedocs/cpp/Header-Files.html
+### Cloning the Repository
+
+```bash
+git clone <repository-url>
+cd bca152-freertos-multisensor
+```
+
+---
+
+## Building the Project
+
+Build the firmware using PlatformIO:
+
+```bash
+pio run
+```
+
+This compiles the ESP-IDF project and produces the `.bin` and `.elf` artifacts required by Wokwi.
+
+---
+
+## Running the Wokwi Simulation
+
+1. Ensure the Wokwi extension is installed and configured in VS Code.
+2. Open the Command Palette (`Ctrl+Shift+P`) and run `Wokwi: Start Simulator`.
+3. The ESP32 will boot, and the OLED will display "ROOM MONITOR" with the first sensor page (Temperature).
+4. Rotate the encoder to navigate between Temperature, Humidity, Light, and Motion pages.
+5. Simulate motion on the PIR sensor to wake the system from INACTIVE state.
+6. Observe the buzzer activating when the DHT22 temperature is set outside the 18 °C to 30 °C range.
+
+![Wokwi Circuit Simulation](docs/images/finished-system.png)
+
+**Figure 4. Finished-System Screenshot in Wokwi**
+
+---
+
+## Unit Testing
+
+This project uses the Unity framework for unit testing. Run the tests natively (without hardware) using:
+
+```bash
+pio test -e native
+```
+
+![Native Unit Test Output](docs/images/native-tests-14-passed.png)
+
+**Figure 5. Native Unit Test Output (14/14 Passed)**
+
+The test suite covers:
+
+- **Temperature Alarm Logic (5 tests):** Below lower threshold, exactly lower threshold, normal, exactly upper threshold, above upper threshold.
+- **Display Navigation (5 tests):** Forward transition, forward wraparound, reverse transition, reverse wraparound, forward from a mid-cycle state.
+- **System State (4 tests):** ACTIVE + no timeout, ACTIVE + timeout, INACTIVE + no motion, INACTIVE + motion detected.
+
+---
+
+## Static Code Analysis
+
+Run static analysis using Cppcheck via PlatformIO:
+
+```bash
+pio check
+```
+
+The current analysis completes with one documented low-severity portability finding related to `memset()` on a structure containing floating-point data in the ADC configuration. This is a known Cppcheck limitation and the code is functionally correct because the structure is fully zero-initialized before use.
+
+---
+
+## Functional Verification
+
+The system was verified in the Wokwi simulator against the following test cases:
+
+| Test ID | Description | Expected Output | Result |
+|---|---|---|---|
+| FT1 | Temperature below 18°C | Alarm activates | PASS |
+| FT2 | Temperature exactly 18°C | Alarm activates | PASS |
+| FT3 | Normal temperature | Alarm OFF | PASS |
+| FT4 | Temperature exactly 30°C | Alarm activates | PASS |
+| FT5 | Temperature above 30°C | Alarm activates | PASS |
+| FT6 | Rotary encoder next page | OLED changes page | PASS |
+| FT7 | Display wrap-around | Returns to first page | PASS |
+| FT8 | Rotary encoder previous | OLED changes backward | PASS |
+| FT9 | Previous wrap-around | Returns to last page | PASS |
+| FT10 | Humidity display | Humidity shown | PASS |
+| FT11 | PIR detects motion | System ACTIVE | PASS |
+| FT12 | 15-second inactivity | OLED OFF | PASS |
+| FT13 | Continuous activity | OLED remains ON | PASS |
+| FT14 | No motion while inactive | System stays asleep | PASS |
+
+---
+
+## Engineering Decisions
+
+- **Custom OLED Font:** A hand-coded 5×7 pixel font table was used instead of an external library (such as `u8g2` or `Adafruit_SSD1306`) to eliminate third-party dependencies and reduce flash footprint.
+- **Queue Length of 1 with `xQueuePeek()`:** The `sensorQueue` holds only one item, and `AlarmTask` uses `xQueuePeek()` so both `AlarmTask` and `DisplayTask` can read the latest sensor value without consuming it.
+- **`vTaskDelayUntil()` for Periodic Tasks:** Used for the periodic `SensorTask` and `MotionTask` to ensure drift-free execution, maintaining constant periods regardless of task execution time.
+- **Pure Decision Logic:** Functions such as `evaluateTemperature()`, `nextDisplayMode()`, `previousDisplayMode()`, and `evaluateSystemState()` are implemented as pure functions, enabling hardware-independent unit testing on the native platform.
+- **Event Group Bits:** `EVENT_ACTIVE`, `EVENT_MOTION`, and `EVENT_ALARM` provide a lightweight signaling mechanism between the motion subsystem and the system state logic.
+
+---
+
+## Limitations
+
+1. **LDR Calibration:** The light level is reported as a 0–100% relative value, not calibrated lux. No photometric calibration was performed.
+2. **DHT22 Accuracy:** The DHT22 in Wokwi is a simulated component; real-world accuracy and timing variations are not represented.
+3. **Single Sensor Queue:** The queue holds only one `SensorData` item. If the consumer is delayed, intermediate readings are lost.
+4. **Event Group Bits:** `EVENT_ALARM` is defined but not consumed by any task; it is reserved for future use.
+
+---
+
+## Future Improvements
+
+- Add a sensor data history queue to buffer multiple readings.
+- Implement an `EVENT_ALARM` consumer to trigger additional notifications.
+- Calibrate the LDR for approximate lux values.
+- Add persistent logging to non-volatile storage.
+- Extend the state machine with additional states (e.g., ALARM, CONFIG).
+- Add a real-time clock (RTC) for timestamped readings.
+
+---
+
+## References and Acknowledgments
+
+- **Course:** BCA152 – Microcontrollers, Mindanao State University - Iligan Institute of Technology
+- **Instructor:** Asst. Prof. Paul Rodolf P. Castor, M.Sc.
+- **Framework:** Espressif IoT Development Framework (ESP-IDF)
+- **Simulator:** Wokwi
+- **RTOS:** FreeRTOS
+- **Test Framework:** Unity Test Framework
+- **Static Analysis:** Cppcheck
