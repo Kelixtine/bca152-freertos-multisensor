@@ -30,6 +30,10 @@ void motion_task(void *pvParameters)
 
     safe_log("[MotionTask] System ACTIVE");
 
+    // Periodic task timing using vTaskDelayUntil()
+    TickType_t lastWakeTime = xTaskGetTickCount();
+    const TickType_t taskPeriod = pdMS_TO_TICKS(100);
+
     while (true)
     {
         bool motion = gpio_get_level(PIR_PIN);
@@ -82,6 +86,9 @@ void motion_task(void *pvParameters)
             }
         }
 
-        vTaskDelay(pdMS_TO_TICKS(100));
+        vTaskDelayUntil(
+            &lastWakeTime,
+            taskPeriod
+        );
     }
 }
