@@ -48,37 +48,56 @@ static bool dht22_read(float *temp, float *hum) {
 
     int timeout = 100;
     while (gpio_get_level(DHT_PIN) == 1) {
-        if (--timeout == 0) { taskEXIT_CRITICAL(&dht_mux); return false; }
+        if (--timeout == 0) {
+            taskEXIT_CRITICAL(&dht_mux);
+            return false;
+        }
         ets_delay_us(1);
     }
 
     timeout = 100;
     while (gpio_get_level(DHT_PIN) == 0) {
-        if (--timeout == 0) { taskEXIT_CRITICAL(&dht_mux); return false; }
+        if (--timeout == 0) {
+            taskEXIT_CRITICAL(&dht_mux);
+            return false;
+        }
         ets_delay_us(1);
     }
 
     timeout = 100;
     while (gpio_get_level(DHT_PIN) == 1) {
-        if (--timeout == 0) { taskEXIT_CRITICAL(&dht_mux); return false; }
+        if (--timeout == 0) {
+            taskEXIT_CRITICAL(&dht_mux);
+            return false;
+        }
         ets_delay_us(1);
     }
 
     for (int i = 0; i < 40; i++) {
         timeout = 100;
+
         while (gpio_get_level(DHT_PIN) == 0) {
-            if (--timeout == 0) { taskEXIT_CRITICAL(&dht_mux); return false; }
+            if (--timeout == 0) {
+                taskEXIT_CRITICAL(&dht_mux);
+                return false;
+            }
             ets_delay_us(1);
         }
 
         int t = 0;
+
         while (gpio_get_level(DHT_PIN) == 1) {
             t++;
-            if (t > 150) break;
+
+            if (t > 150) {
+                break;
+            }
+
             ets_delay_us(1);
         }
 
         data[i / 8] <<= 1;
+
         if (t > 35) {
             data[i / 8] |= 1;
         }
@@ -89,10 +108,14 @@ static bool dht22_read(float *temp, float *hum) {
     if (data[4] == ((data[0] + data[1] + data[2] + data[3]) & 0xFF)) {
         int raw_hum = (data[0] << 8) | data[1];
         int raw_temp = ((data[2] & 0x7F) << 8) | data[3];
-        if (data[2] & 0x80) raw_temp = -raw_temp;
+
+        if (data[2] & 0x80) {
+            raw_temp = -raw_temp;
+        }
 
         *hum = raw_hum / 10.0f;
         *temp = raw_temp / 10.0f;
+
         return true;
     }
 
@@ -101,7 +124,9 @@ static bool dht22_read(float *temp, float *hum) {
 
 void sensor_task(void *pvParameters) {
     SensorData current_data;
+
     memset(&current_data, 0, sizeof(SensorData));
+
     current_data.temperature = 24.0f;
     current_data.humidity = 55.0f;
 
@@ -109,33 +134,75 @@ void sensor_task(void *pvParameters) {
     const TickType_t period = pdMS_TO_TICKS(2000);
 
     for (;;) {
-        float t = 0.0f, h = 0.0f;
+        // -----------------------------
+        // DHT22 Temperature & Humidity
+        // -----------------------------
+        float t = 0.0f;
+        float h = 0.0f;
+
         if (dht22_read(&t, &h)) {
             current_data.temperature = t;
             current_data.humidity = h;
         }
 
+        // -----------------------------
+        // LDR / Photoresistor
+        // -----------------------------
         int raw_adc = 0;
+
         if (adc1_handle != NULL) {
-            adc_oneshot_read(adc1_handle, ADC_CHANNEL_6, &raw_adc);
+            adc_oneshot_read(
+                adc1_handle,
+                ADC_CHANNEL_6,
+                &raw_adc
+            );
         }
-        current_data.lightLevel = (raw_adc * 100) / 4095;
 
-        current_data.motionDetected = (gpio_get_level(PIR_PIN) == 1);
+        // Wokwi photoresistor produces a lower ADC value
+        // at higher illumination, so invert the ADC reading.
+        current_data.lightLevel =
+            ((4095 - raw_adc) * 100) / 4095;
 
+        // Keep the value between 0% and 100%.
+        if (current_data.lightLevel < 0) {
+            current_data.lightLevel = 0;
+        }
+
+        if (current_data.lightLevel > 100) {
+            current_data.lightLevel = 100;
+        }
+
+        // -----------------------------
+        // PIR Motion Sensor
+        // -----------------------------
+        current_data.motionDetected =
+            (gpio_get_level(PIR_PIN) == 1);
+
+        // -----------------------------
+        // Send sensor data to queue
+        // -----------------------------
         if (sensorQueue != NULL) {
             xQueueOverwrite(sensorQueue, &current_data);
         }
 
+        // -----------------------------
+        // Serial Logging
+        // -----------------------------
         char log_buf[128];
-        snprintf(log_buf, sizeof(log_buf),
-                 "[SensorTask] Temp: %.1f C | Hum: %.1f %% | Light: %d %% | Motion: %s",
-                 current_data.temperature,
-                 current_data.humidity,
-                 current_data.lightLevel,
-                 current_data.motionDetected ? "YES" : "NO");
+
+        snprintf(
+            log_buf,
+            sizeof(log_buf),
+            "[SensorTask] Temp: %.1f C | Hum: %.1f %% | Light: %d %% | Motion: %s",
+            current_data.temperature,
+            current_data.humidity,
+            current_data.lightLevel,
+            current_data.motionDetected ? "YES" : "NO"
+        );
+
         safe_log(log_buf);
 
+        // Run the sensor task every 2 seconds.
         vTaskDelayUntil(&lastWakeTime, period);
     }
 }
