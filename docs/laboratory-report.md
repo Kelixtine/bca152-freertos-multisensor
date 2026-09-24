@@ -55,17 +55,27 @@ The DHT22 is configured as an open-drain GPIO with a pull-up; the LDR is read th
 ### 2.2 Software Architecture
 The application is decomposed into the following source modules:
 
-```text
-include/               src/
-├── alarm.h            ├── alarm.cpp
-├── display.h          ├── display.cpp
-├── input.h            ├── input.cpp
-├── motion.h           ├── motion.cpp
-├── rtos_objects.h     ├── rtos_objects.cpp
-├── sensors.h          ├── sensors.cpp
-└── system_state.h     └── system_state.cpp
-                       └── main.cpp
-```
+    bca152-freertos-multisensor/
+    |-- include/
+    |   |-- alarm.h
+    |   |-- display.h
+    |   |-- input.h
+    |   |-- motion.h
+    |   |-- rtos_objects.h
+    |   |-- sensors.h
+    |   `-- system_state.h
+    |-- src/
+    |   |-- alarm.cpp
+    |   |-- display.cpp
+    |   |-- input.cpp
+    |   |-- motion.cpp
+    |   |-- rtos_objects.cpp
+    |   |-- sensors.cpp
+    |   |-- system_state.cpp
+    |   `-- main.cpp
+    |-- test/
+    |   `-- test_main.cpp
+    `-- platformio.ini
 
 `main.cpp` is intentionally minimal: it initializes RTOS objects, initializes sensors, runs embedded unit tests, and creates the FreeRTOS tasks. The application does not reside in a single monolithic file.
 
@@ -74,12 +84,10 @@ The system operates as a two-state machine, as shown in the state transition dia
 
 ![State Transition Diagram](images/state-machine.png)
 
-```text
-         inactivity timeout (15 s)
-ACTIVE ──────────────────────────────► INACTIVE
-   ▲                                        │
-   └────────── motion detected ─────────────┘
-```
+    inactivity timeout (15 s)
+    ACTIVE ------------------------------> INACTIVE
+       ^                                        |
+       `---------- motion detected -------------'
 
 * **ACTIVE:** OLED ON (Monitoring active), sensor processing active, encoder responsive, alarm active.
 * **INACTIVE:** OLED OFF, unnecessary display operations reduced, PIR monitoring remains operational.
@@ -150,13 +158,11 @@ The DHT22 is read using a bit-banged one-wire protocol with critical sections pr
 ### 4.3 Alarm Logic (alarm.cpp)
 The temperature decision logic is separated from hardware control:
 
-```cpp
-AlarmState evaluateTemperature(float temperature) {
-    if (temperature <= TEMP_LOW_THRESHOLD) return ALARM_LOW_THRESHOLD;
-    if (temperature >= TEMP_HIGH_THRESHOLD) return ALARM_HIGH_THRESHOLD;
-    return ALARM_NORMAL;
-}
-```
+    AlarmState evaluateTemperature(float temperature) {
+        if (temperature <= TEMP_LOW_THRESHOLD) return ALARM_LOW_THRESHOLD;
+        if (temperature >= TEMP_HIGH_THRESHOLD) return ALARM_HIGH_THRESHOLD;
+        return ALARM_NORMAL;
+    }
 
 This pure function is compiled for both the native test environment and the ESP32 target, enabling hardware-independent unit testing. The `AlarmTask` uses `xQueuePeek()` to read the latest sensor value without removing it, then drives the passive buzzer via LEDC PWM at 2 kHz with 50% duty cycle when an alarm condition is active.
 
@@ -231,32 +237,28 @@ Fourteen functional tests were performed in the Wokwi simulator, with all passin
 The following logs were captured during the Wokwi simulation, demonstrating successful operation:
 
 **System Startup:**
-```text
---- Starting FreeRTOS Modular Multisensor Room Monitor ---
-I (311) main_task: Returned from app_main()
-```
+
+    --- Starting FreeRTOS Modular Multisensor Room Monitor ---
+    I (311) main_task: Returned from app_main()
 
 **Sensor Task Outputs (Initial readings and changes):**
-```text
-[SensorTask] Temp: 22.5 C | Hum: 40.0 % | Light: 24 % | Motion: NO
-[SensorTask] Temp: 22.5 C | Hum: 40.0 % | Light: 24 % | Motion: NO
-[SensorTask] Temp: 33.1 C | Hum: 40.0 % | Light: 24 % | Motion: YES
-[SensorTask] Temp: 23.5 C | Hum: 66.0 % | Light: 24 % | Motion: NO
-[SensorTask] Temp: 2.3 C  | Hum: 97.0 % | Light: 24 % | Motion: NO
-[SensorTask] Temp: 35.2 C | Hum: 97.0 % | Light: 24 % | Motion: NO
-```
+
+    [SensorTask] Temp: 22.5 C | Hum: 40.0 % | Light: 24 % | Motion: NO
+    [SensorTask] Temp: 22.5 C | Hum: 40.0 % | Light: 24 % | Motion: NO
+    [SensorTask] Temp: 33.1 C | Hum: 40.0 % | Light: 24 % | Motion: YES
+    [SensorTask] Temp: 23.5 C | Hum: 66.0 % | Light: 24 % | Motion: NO
+    [SensorTask] Temp: 2.3 C  | Hum: 97.0 % | Light: 24 % | Motion: NO
+    [SensorTask] Temp: 35.2 C | Hum: 97.0 % | Light: 24 % | Motion: NO
 
 **Display and State Transition Outputs:**
-```text
-[DisplayTask] OLED OFF
-[MotionTask] System ACTIVE
-```
+
+    [DisplayTask] OLED OFF
+    [MotionTask] System ACTIVE
 
 **Alarm Task Outputs:**
-```text
-[AlarmTask] Activated
-[AlarmTask] Deactivated
-```
+
+    [AlarmTask] Activated
+    [AlarmTask] Deactivated
 
 ### 5.4 Deliberate FreeRTOS Fault Experiments
 Three controlled fault experiments were performed to demonstrate understanding of FreeRTOS scheduling and synchronization:
@@ -270,10 +272,9 @@ Three controlled fault experiments were performed to demonstrate understanding o
 ## 6. Static Code Analysis
 
 PlatformIO Check was run with Cppcheck using the following flags:
-```text
---enable=warning,style,performance,portability
---suppress=missingInclude
-```
+
+    --enable=warning,style,performance,portability
+    --suppress=missingInclude
 
 ### Findings:
 
@@ -386,3 +387,20 @@ The project is organized into modular source files, uses native ESP-IDF APIs exc
 
 15. **What would differ if this system ran on physical hardware?**  
     DHT22 timing would be more critical, LDR would need calibration for accurate lux values, PIR sensor warm-up time would apply, and encoder debouncing might require hardware filters.
+
+---
+
+## Appendix C: AI Assistance Disclosure
+
+Throughout the completion of this laboratory activity, **ChatGPT by OpenAI** was used as an AI-assisted learning and development tool. The AI was consulted throughout the different parts of the laboratory work as a guide for understanding technical concepts, troubleshooting errors, reviewing implementation approaches, explaining FreeRTOS and ESP-IDF concepts, assisting with debugging, and improving the organization and documentation of the project.
+
+The use of ChatGPT included guidance related to topics such as FreeRTOS task scheduling, task priorities, queues, mutexes, event groups, state-machine logic, ESP-IDF APIs, sensor interfacing, ADC configuration, OLED display handling, rotary-encoder navigation, unit testing, debugging, Git/PlatformIO workflow, and technical documentation.
+
+AI assistance was used as a **supporting reference and learning aid throughout the laboratory**, rather than as a replacement for the student's own work and understanding. The resulting code, configurations, testing, debugging, hardware/simulation verification, and laboratory decisions were reviewed and evaluated by the student. The student remains responsible for the submitted implementation, results, interpretations, and conclusions.
+
+The AI tool used was:
+
+**ChatGPT — OpenAI**  
+https://chatgpt.com/
+
+This disclosure is provided to maintain transparency regarding the use of AI-assisted tools during the development and documentation of this laboratory activity.
